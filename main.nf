@@ -130,10 +130,10 @@ params.gff = params.genome ? params.genomes[ params.genome ].gff ?: false : fals
 params.bed12 = params.genome ? params.genomes[ params.genome ].bed12 ?: false : false
 params.hisat2_index = params.genome ? params.genomes[ params.genome ].hisat2 ?: false : false
 
-ch_mdsplot_header = Channel.fromPath("$baseDir/assets/mdsplot_header.txt", checkIfExists: true)
-ch_heatmap_header = Channel.fromPath("$baseDir/assets/heatmap_header.txt", checkIfExists: true)
-ch_biotypes_header = Channel.fromPath("$baseDir/assets/biotypes_header.txt", checkIfExists: true)
-Channel.fromPath("$baseDir/assets/where_are_my_files.txt", checkIfExists: true)
+ch_mdsplot_header = Channel.fromPath("$params.assetsDir/assets/mdsplot_header.txt", checkIfExists: true)
+ch_heatmap_header = Channel.fromPath("$params.assetsDir/assets/heatmap_header.txt", checkIfExists: true)
+ch_biotypes_header = Channel.fromPath("$params.assetsDir/assets/biotypes_header.txt", checkIfExists: true)
+Channel.fromPath("$params.assetsDir/assets/where_are_my_files.txt", checkIfExists: true)
        .into{ch_where_trim_galore; ch_where_star; ch_where_hisat2; ch_where_hisat2_sort}
 
 // Define regular variables so that they can be overwritten
@@ -356,9 +356,9 @@ if (workflow.profile == 'awsbatch') {
 }
 
 // Stage config files
-ch_multiqc_config = file("$baseDir/assets/multiqc_config.yaml", checkIfExists: true)
+ch_multiqc_config = file("$params.assetsDir/assets/multiqc_config.yaml", checkIfExists: true)
 ch_multiqc_custom_config = params.multiqc_config ? Channel.fromPath(params.multiqc_config, checkIfExists: true) : Channel.empty()
-ch_output_docs = file("$baseDir/docs/output.md", checkIfExists: true)
+ch_output_docs = file("$params.assetsDir/docs/output.md", checkIfExists: true)
 
 /*
  * Create a channel for input read files
@@ -1912,18 +1912,18 @@ workflow.onComplete {
 
     // Render the TXT template
     def engine = new groovy.text.GStringTemplateEngine()
-    def tf = new File("$baseDir/assets/email_template.txt")
+    def tf = new File("$params.assetsDir/assets/email_template.txt")
     def txt_template = engine.createTemplate(tf).make(email_fields)
     def email_txt = txt_template.toString()
 
     // Render the HTML template
-    def hf = new File("$baseDir/assets/email_template.html")
+    def hf = new File("$params.assetsDir/assets/email_template.html")
     def html_template = engine.createTemplate(hf).make(email_fields)
     def email_html = html_template.toString()
 
     // Render the sendmail template
-    def smail_fields = [ email: email_address, subject: subject, email_txt: email_txt, email_html: email_html, baseDir: "$baseDir", mqcFile: mqc_report, mqcMaxSize: params.max_multiqc_email_size.toBytes() ]
-    def sf = new File("$baseDir/assets/sendmail_template.txt")
+    def smail_fields = [ email: email_address, subject: subject, email_txt: email_txt, email_html: email_html, assetsDir: "$params.assetsDir", mqcFile: mqc_report, mqcMaxSize: params.max_multiqc_email_size.toBytes() ]
+    def sf = new File("$params.assetsDir/assets/sendmail_template.txt")
     def sendmail_template = engine.createTemplate(sf).make(smail_fields)
     def sendmail_html = sendmail_template.toString()
 
