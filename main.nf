@@ -414,7 +414,7 @@ if (params.gff) summary['GFF3 Annotation'] = params.gff
 if (params.bed12) summary['BED Annotation'] = params.bed12
 if (params.gencode) summary['GENCODE'] = params.gencode
 if (params.stringTieIgnoreGTF) summary['StringTie Ignore GTF'] = params.stringTieIgnoreGTF
-summary['Remove Ribosomal RNA'] = params.removeRiboRNA
+summary['Remove Ribo RNA'] = params.removeRiboRNA
 if (params.fc_group_features_type) summary['Biotype GTF field'] = biotype
 summary['Save prefs'] = "Ref Genome: "+(params.saveReference ? 'Yes' : 'No')+" / Trimmed FastQ: "+(params.saveTrimmed ? 'Yes' : 'No')+" / Alignment intermediates: "+(params.saveAlignedIntermediates ? 'Yes' : 'No')
 summary['Max Resources'] = "$params.max_memory memory, $params.max_cpus cpus, $params.max_time time per job"
@@ -1910,20 +1910,28 @@ workflow.onComplete {
         email_address = params.email_on_fail
     }
 
+    // Download template files
+    new File("email_template.txt")    << new URL ("https://raw.githubusercontent.com/cgpu/rnaseq/master/assets/email_template.txt").getText()
+    new File("email_template.html")   << new URL ("https://raw.githubusercontent.com/cgpu/rnaseq/master/assets/email_template.html").getText()
+    new File("sendmail_template.txt") << new URL ("https://raw.githubusercontent.com/cgpu/rnaseq/master/assets/sendmail_template.txt").getText()
+
+    // Download image for sendmail_template.txt
+    download_img("https://raw.githubusercontent.com/cgpu/rnaseq/master/assets/nf-core-rnaseq_logo.png")
+
     // Render the TXT template
     def engine = new groovy.text.GStringTemplateEngine()
-    def tf = new File("$params.assetsDir/assets/email_template.txt")
+    def tf = new File("email_template.txt")
     def txt_template = engine.createTemplate(tf).make(email_fields)
     def email_txt = txt_template.toString()
 
     // Render the HTML template
-    def hf = new File("$params.assetsDir/assets/email_template.html")
+    def hf = new File("email_template.html")
     def html_template = engine.createTemplate(hf).make(email_fields)
     def email_html = html_template.toString()
 
     // Render the sendmail template
     def smail_fields = [ email: email_address, subject: subject, email_txt: email_txt, email_html: email_html, assetsDir: "$params.assetsDir", mqcFile: mqc_report, mqcMaxSize: params.max_multiqc_email_size.toBytes() ]
-    def sf = new File("$params.assetsDir/assets/sendmail_template.txt")
+    def sf = new File("sendmail_template.txt")
     def sendmail_template = engine.createTemplate(sf).make(smail_fields)
     def sendmail_html = sendmail_template.toString()
 
@@ -1968,7 +1976,7 @@ workflow.onComplete {
                 break;
             }
         }
-        log.info "[${c_purple}nf-core/rnaseq${c_reset}] ${c_green}${good_alignment_scores.size()}/$total_aln_count samples passed minimum ${params.percent_aln_skip}% aligned check\n${samp_aln}${c_reset}"
+        log.info "[${c_purple}nf-core/rnaseq${c_reset}] \n${c_green}${good_alignment_scores.size()}/$total_aln_count samples passed minimum ${params.percent_aln_skip}% aligned check\n${samp_aln}${c_reset}"
     }
     if (poor_alignment_scores.size() > 0){
         samp_aln = ''
@@ -2041,4 +2049,11 @@ def checkHostname() {
             }
         }
     }
+}
+
+// Download .png image and save as .png file in current working directory
+public void download_img(def address) {
+  new File("${address.tokenize('/')[-1]}").withOutputStream { out ->
+      new URL(address).withInputStream { from ->  out << from; }
+  }
 }
