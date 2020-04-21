@@ -145,8 +145,6 @@ forwardStranded = params.forwardStranded
 reverseStranded = params.reverseStranded
 unStranded = params.unStranded
 
-
-
 // Preset trimming options
 if (params.pico) {
     clip_r1 = 3
@@ -1536,7 +1534,7 @@ if (!params.skipAlignment) {
 
             output:
                 file("*.genes.results") into rsem_results_genes
-                file("*.isoforms.results") into rsem_results_isoforms
+                file("*.isoforms.results") into (rsem_results_isoforms, rsem_results_isoforms_hbadeals)
                 file("*.stat") into rsem_logs
 
             script:
@@ -1554,7 +1552,6 @@ if (!params.skipAlignment) {
             ${sample_name}
             """
     }
-
 
     /**
     * Step 12 - merge RSEM TPM
@@ -1601,8 +1598,8 @@ if (!params.skipAlignment) {
             publishDir "${params.outdir}/hbadeals", mode: "${params.publish_dir_mode}"
 
             input:
-                set val(contrast_id), file(metadata) from hbadeals_metadata
-                file "*" from rsem_results_isoforms.collect()
+                set val(contrast_id), file(metadata) from ch_hbadeals_metadata
+                file("*") from rsem_results_isoforms_hbadeals.collect()
 
             output:
                 file("${contrast_id}.csv") into hbadeals_results_isoforms
