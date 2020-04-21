@@ -145,6 +145,8 @@ forwardStranded = params.forwardStranded
 reverseStranded = params.reverseStranded
 unStranded = params.unStranded
 
+
+
 // Preset trimming options
 if (params.pico) {
     clip_r1 = 3
@@ -383,6 +385,19 @@ if (params.readPaths) {
         .ifEmpty { exit 1, "Cannot find any reads matching: ${params.reads}\nNB: Path needs to be enclosed in quotes!\nNB: Path requires at least one * wildcard!\nIf this is single-end data, please specify --single_end on the command line." }
         .into { raw_reads_fastqc; raw_reads_trimgalore }
 }
+
+/*
+ *  Create channel for the HBA-DEALS metadata contrasts
+ */
+
+// Input list .csv file of many .csv files
+if (params.hbadeals_metadata.endsWith(".csv")) {
+  Channel.fromPath(params.hbadeals_metadata)
+                        .ifEmpty { exit 1, "Input master file .csv of .csv metadata files not found at ${params.hbadeals_metadata}. Is the file path correct?" }
+                        .splitCsv(sep: ',' , skip: 1)
+                        .map { unique_id, path -> tuple("contrast_"+unique_id, file(path)) }
+                        .set { ch_hbadeals_metadata }
+  }
 
 // Header log info
 log.info nfcoreHeader()
@@ -1576,6 +1591,40 @@ if (!params.skipAlignment) {
         paste transcript_ids.txt tmp_isoforms/*.tpm.txt > rsem_tpm_isoform.txt
         """
     }
+
+    /**
+     * Step HBA-DEALS
+     */
+    process hbadeals {
+            tag "${contrast_id}"
+            label "hbadeals"
+            publishDir "${params.outdir}/hbadeals", mode: "${params.publish_dir_mode}"
+
+            input:
+                set val(contrast_id), file(metadata) from hbadeals_metadata
+                file "*" from rsem_results_isoforms.collect()
+
+            output:
+                file("${contrast_id}.csv") into hbadeals_results_isoforms
+
+            when:
+            !params.skip_rsem && !params.skip_hbadeals
+
+
+            script:
+            """
+            rsem2hbadeals.R \
+            --rsem_folder='.' \
+            --metadata=$metadata \
+            --rsem_file_suffix=$params.rsem_file_suffix \
+            --output=$contrast_id \
+            --isoform_level=$params.isoform_level \
+            --mcmc_iter=$params.mcmc_iter \
+            --mcmc_warmup=$params.mcmc_warmup \
+            --n_cores=${task.cpus}
+            """
+    }
+
   } else {
       rsem_logs = Channel.from(false)
   }
