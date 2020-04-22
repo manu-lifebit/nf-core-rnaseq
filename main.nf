@@ -21,6 +21,10 @@ def helpMessage() {
 
     Mandatory arguments:
       --reads [file]                Path to input data (must be surrounded with quotes)
+      --accessionList [file]        Path to input file with accession list to fetch from SRA
+                                    Alternative to --reads. Define SRA samples to be retrieved.
+                                    NOTE: If provided, it will override the --reads parameter.
+
       -profile [str]                Configuration profile to use. Can use multiple (comma separated)
                                     Available: conda, docker, singularity, test, awsbatch, <institute> and more
 
@@ -90,6 +94,8 @@ def helpMessage() {
       --skipMultiQC                 Skip MultiQC
 
     Other options:
+      --keyFile                     Path to a keyfile used to fetch restricted access datasets with SRAtools
+                                    NOTE: Conditionally required, when --accesionList is provided and includes restricted access SRA samples.
       --sampleLevel                 Used to turn off the edgeR MDS and heatmap. Set automatically when running on fewer than 3 samples
       --outdir                      The output directory where the results will be saved
       -w/--work-dir                 The temporary directory where intermediate data will be saved
@@ -144,6 +150,7 @@ three_prime_clip_r2 = params.three_prime_clip_r2
 forwardStranded = params.forwardStranded
 reverseStranded = params.reverseStranded
 unStranded = params.unStranded
+key_file   = params.keyFile == "NO_FILE" ?  false : file(params.keyFile)
 
 // Preset trimming options
 if (params.pico) {
@@ -361,27 +368,42 @@ ch_multiqc_custom_config = params.multiqc_config ? Channel.fromPath(params.multi
 ch_output_docs = file("$params.assetsDir/docs/output.md", checkIfExists: true)
 
 /*
- * Create a channel for input read files
+ * Create a channel for input read files, from path or by retrieving from SRA
  */
-if (params.readPaths) {
-    if (params.single_end) {
+
+if(!params.accessionList) {
+    if (params.readPaths && params.single_end) {
         Channel
             .from(params.readPaths)
             .map { row -> [ row[0], [ file(row[1][0], checkIfExists: true) ] ] }
             .ifEmpty { exit 1, "params.readPaths was empty - no input files supplied" }
-            .into { raw_reads_fastqc; raw_reads_trimgalore }
-    } else {
+            .into { raw_reads_inspect ; raw_reads_fastqc; raw_reads_trimgalore }
+    }
+    if (params.readPaths && !params.single_end) {
         Channel
             .from(params.readPaths)
             .map { row -> [ row[0], [ file(row[1][0], checkIfExists: true), file(row[1][1], checkIfExists: true) ] ] }
             .ifEmpty { exit 1, "params.readPaths was empty - no input files supplied" }
-            .into { raw_reads_fastqc; raw_reads_trimgalore }
+            .into { raw_reads_inspect ; raw_reads_fastqc; raw_reads_trimgalore }
     }
-} else {
+    if (params.reads) {
+        Channel
+            .fromFilePairs( params.reads, size: params.single_end ? 1 : 2 )
+            .ifEmpty { exit 1, "Cannot find any reads matching: ${params.reads}\nNB: Path needs to be enclosed in quotes!\nNB: Path requires at least one * wildcard!\nIf this is single-end data, please specify --single_end on the command line." }
+            .into { raw_reads_inspect ; raw_reads_fastqc; raw_reads_trimgalore }
+    }
+
+raw_reads_inspect.view()
+}
+
+if(params.accessionList) {
     Channel
-        .fromFilePairs( params.reads, size: params.single_end ? 1 : 2 )
-        .ifEmpty { exit 1, "Cannot find any reads matching: ${params.reads}\nNB: Path needs to be enclosed in quotes!\nNB: Path requires at least one * wildcard!\nIf this is single-end data, please specify --single_end on the command line." }
-        .into { raw_reads_fastqc; raw_reads_trimgalore }
+        .fromPath( params.accessionList )
+        .splitText()
+        .map{ it.trim() }
+        .dump(tag: 'AccessionList content')
+        .ifEmpty { exit 1, "Accession list file not found in the location defined by --accessionList. Is the file path correct?" }
+        .set { accessionIDs }
 }
 
 /*
@@ -404,6 +426,8 @@ if (workflow.revision) summary['Pipeline Release'] = workflow.revision
 summary['Run Name'] = custom_runName ?: workflow.runName
 summary['Reads'] = params.reads
 summary['Data Type'] = params.single_end ? 'Single-End' : 'Paired-End'
+if (params.accessionList) summary['SRA accession list'] = ${params.accessionList}
+if (params.accessionList && params.keyFile) summary['SRAtools key file'] = ${params.keyFile}
 if (params.genome) summary['Genome'] = params.genome
 if (params.pico) summary['Library Prep'] = "SMARTer Stranded Total RNA-Seq Kit - Pico Input"
 summary['Strandedness'] = (unStranded ? 'None' : forwardStranded ? 'Forward' : reverseStranded ? 'Reverse' : 'None')
