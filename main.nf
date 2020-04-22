@@ -95,7 +95,7 @@ def helpMessage() {
 
     Other options:
       --keyFile                     Path to a keyfile used to fetch restricted access datasets with SRAtools
-                                    NOTE: Conditionally required, when --accesionList is provided and includes restricted access SRA samples.
+                                    NOTE: Conditionally required, when --accessionList is provided and includes restricted access SRA samples.
       --sampleLevel                 Used to turn off the edgeR MDS and heatmap. Set automatically when running on fewer than 3 samples
       --outdir                      The output directory where the results will be saved
       -w/--work-dir                 The temporary directory where intermediate data will be saved
@@ -150,7 +150,7 @@ three_prime_clip_r2 = params.three_prime_clip_r2
 forwardStranded = params.forwardStranded
 reverseStranded = params.reverseStranded
 unStranded = params.unStranded
-key_file   = params.keyFile == "NO_FILE" ?  false : file(params.keyFile)
+key_file   = file(params.keyFile)
 
 // Preset trimming options
 if (params.pico) {
@@ -284,7 +284,7 @@ if (params.rsem_reference && !params.skip_rsem && !params.skipAlignment) {
     } else {
         Channel.fromPath(params.fasta, checkIfExists: true)
             .ifEmpty { exit 1, "Genome fasta file not found: ${params.fasta}" }
-            .into { ch_fasta_for_rsem_reference }
+            .set { ch_fasta_for_rsem_reference }
     }
 } else if (params.skip_rsem || params.skipAlignment) {
     println "Skipping RSEM ..."
@@ -403,8 +403,11 @@ if(params.accessionList) {
         .map{ it.trim() }
         .dump(tag: 'AccessionList content')
         .ifEmpty { exit 1, "Accession list file not found in the location defined by --accessionList. Is the file path correct?" }
-        .set { accessionIDs }
+        .into { accessionIDs_inspect ; accessionIDs }
+
+    accessionIDs_inspect.view()
 }
+
 
 /*
  *  Create channel for the HBA-DEALS metadata contrasts
@@ -413,7 +416,7 @@ if(params.accessionList) {
 // Input list .csv file of many .csv files
 if (params.hbadeals_metadata.endsWith(".csv")) {
   Channel.fromPath(params.hbadeals_metadata)
-                        .ifEmpty { exit 1, "Input master file .csv of .csv metadata files not found at ${params.hbadeals_metadata}. Is the file path correct?" }
+                        .ifEmpty { exit 1, "Input master file .csv of .csv metadata files not found at ${params.hbadeals_metadata} or the suffix is not .csv. Is the file path correct?" }
                         .splitCsv(sep: ',' , skip: 1)
                         .map { unique_id, path -> tuple("contrast_"+unique_id, file(path)) }
                         .set { ch_hbadeals_metadata }
@@ -424,10 +427,10 @@ log.info nfcoreHeader()
 def summary = [:]
 if (workflow.revision) summary['Pipeline Release'] = workflow.revision
 summary['Run Name'] = custom_runName ?: workflow.runName
-summary['Reads'] = params.reads
+if (!params.accessionList) summary['Reads'] = params.reads
 summary['Data Type'] = params.single_end ? 'Single-End' : 'Paired-End'
-if (params.accessionList) summary['SRA accession list'] = ${params.accessionList}
-if (params.accessionList && params.keyFile) summary['SRAtools key file'] = ${params.keyFile}
+if (params.accessionList) summary['SRA accession '] = params.accessionList
+if (params.accessionList && (params.keyFile != "NO_FILE") ) summary['SRAtools key file '] = params.keyFile
 if (params.genome) summary['Genome'] = params.genome
 if (params.pico) summary['Library Prep'] = "SMARTer Stranded Total RNA-Seq Kit - Pico Input"
 summary['Strandedness'] = (unStranded ? 'None' : forwardStranded ? 'Forward' : reverseStranded ? 'Reverse' : 'None')
@@ -917,6 +920,35 @@ if (params.pseudo_aligner == 'salmon' && !params.salmon_index) {
         """
     }
 }
+
+
+/*
+ * STEP  - Get accession samples from SRA with or without keyFile
+ */
+
+if (params.accessionList) {
+
+    process getAccession {
+        tag "${accession}"
+        
+        input:
+        val(accession) from accessionIDs
+        file keyFile from key_file
+        
+        output:
+        set val(accession), file("*.fastq.gz") into (raw_reads_inspect, raw_reads_fastqc, raw_reads_trimgalore)
+        
+        script:
+        def vdbConfigCmd = keyFile.name != 'NO_FILE' ? "vdb-config --import ${keyFile} ./" : ''
+        """
+        $vdbConfigCmd
+        fasterq-dump $accession --threads ${task.cpus} --split-3
+        pigz *.fastq
+        """
+    }
+    raw_reads_inspect.view()
+}
+
 
 /*
  * STEP 1 - FastQC
