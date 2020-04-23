@@ -150,7 +150,8 @@ three_prime_clip_r2 = params.three_prime_clip_r2
 forwardStranded = params.forwardStranded
 reverseStranded = params.reverseStranded
 unStranded = params.unStranded
-if (params.keyFile != "NO_FILE") key_file   = file(params.keyFile)
+
+key_file = file(params.keyFile)
 
 // Preset trimming options
 if (params.pico) {
@@ -430,7 +431,7 @@ summary['Run Name'] = custom_runName ?: workflow.runName
 if (!params.accessionList) summary['Reads'] = params.reads
 summary['Data Type'] = params.single_end ? 'Single-End' : 'Paired-End'
 if (params.accessionList) summary['SRA accession '] = params.accessionList
-if (params.accessionList && (params.keyFile != "NO_FILE") ) summary['SRAtools key file '] = params.keyFile
+if (params.accessionList) summary['SRAtools key file '] = params.keyFile
 if (params.genome) summary['Genome'] = params.genome
 if (params.pico) summary['Library Prep'] = "SMARTer Stranded Total RNA-Seq Kit - Pico Input"
 summary['Strandedness'] = (unStranded ? 'None' : forwardStranded ? 'Forward' : reverseStranded ? 'Reverse' : 'None')
