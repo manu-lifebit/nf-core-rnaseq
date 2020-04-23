@@ -94,8 +94,6 @@ def helpMessage() {
       --skipMultiQC                 Skip MultiQC
 
     Other options:
-      --keyFile                     Path to a keyfile used to fetch restricted access datasets with SRAtools
-                                    NOTE: Conditionally required, when --accessionList is provided and includes restricted access SRA samples.
       --sampleLevel                 Used to turn off the edgeR MDS and heatmap. Set automatically when running on fewer than 3 samples
       --outdir                      The output directory where the results will be saved
       -w/--work-dir                 The temporary directory where intermediate data will be saved
@@ -150,8 +148,6 @@ three_prime_clip_r2 = params.three_prime_clip_r2
 forwardStranded = params.forwardStranded
 reverseStranded = params.reverseStranded
 unStranded = params.unStranded
-
-key_file = file(params.keyFile)
 
 // Preset trimming options
 if (params.pico) {
@@ -431,7 +427,6 @@ summary['Run Name'] = custom_runName ?: workflow.runName
 if (!params.accessionList) summary['Reads'] = params.reads
 summary['Data Type'] = params.single_end ? 'Single-End' : 'Paired-End'
 if (params.accessionList) summary['SRA accession '] = params.accessionList
-if (params.accessionList) summary['SRAtools key file '] = params.keyFile
 if (params.genome) summary['Genome'] = params.genome
 if (params.pico) summary['Library Prep'] = "SMARTer Stranded Total RNA-Seq Kit - Pico Input"
 summary['Strandedness'] = (unStranded ? 'None' : forwardStranded ? 'Forward' : reverseStranded ? 'Reverse' : 'None')
@@ -924,7 +919,7 @@ if (params.pseudo_aligner == 'salmon' && !params.salmon_index) {
 
 
 /*
- * STEP  - Get accession samples from SRA with or without keyFile
+ * STEP  - Get accession samples from SRA
  */
 
 if (params.accessionList) {
@@ -934,15 +929,12 @@ if (params.accessionList) {
         
         input:
         val(accession) from accessionIDs
-        file keyFile from key_file
         
         output:
         set val(accession), file("*.fastq.gz") into (raw_reads_inspect, raw_reads_fastqc, raw_reads_trimgalore)
         
         script:
-        def vdbConfigCmd = keyFile.name != 'NO_FILE' ? "vdb-config --import ${keyFile} ./" : ''
         """
-        $vdbConfigCmd
         fasterq-dump $accession --threads ${task.cpus} --split-3
         pigz *.fastq
         """
