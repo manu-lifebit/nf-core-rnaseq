@@ -150,7 +150,7 @@ three_prime_clip_r2 = params.three_prime_clip_r2
 forwardStranded = params.forwardStranded
 reverseStranded = params.reverseStranded
 unStranded = params.unStranded
-key_file   = file(params.keyFile)
+if (params.keyFile != "NO_FILE") key_file   = file(params.keyFile)
 
 // Preset trimming options
 if (params.pico) {
