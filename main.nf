@@ -1023,8 +1023,9 @@ if (!params.skipTrimming) {
  */
 if (!params.removeRiboRNA) {
     trimgalore_reads
-        .into { trimmed_reads_alignment; trimmed_reads_salmon }
+        .into { trimmed_reads_inspect ; trimmed_reads_alignment; trimmed_reads_salmon }
     sortmerna_logs = Channel.empty()
+    trimmed_reads_inspect.view()
 } else {
     process sortmerna_index {
         label 'low_memory'
@@ -1169,13 +1170,13 @@ if (!params.skipAlignment) {
           file "*Log.out" into star_log
           file "where_are_my_files.txt"
           file "*Unmapped*" optional true
-          file "${prefix}Aligned.sortedByCoord.out.bam.bai" into bam_index_rseqc, bam_index_genebody
+          file "${name}Aligned.sortedByCoord.out.bam.bai" into bam_index_rseqc, bam_index_genebody
 
           script:
           prefix = reads[0].toString() - ~/(_R1)?(_trimmed)?(_val_1)?(\.fq)?(\.fastq)?(\.gz)?$/
           def star_mem = task.memory ?: params.star_memory ?: false
           def avail_mem = star_mem ? "--limitBAMsortRAM ${star_mem.toBytes() - 100000000}" : ''
-          seq_center = params.seq_center ? "--outSAMattrRGline ID:$prefix 'CN:$params.seq_center' 'SM:$prefix'" : "--outSAMattrRGline ID:$prefix 'SM:$prefix'"
+          seq_center = params.seq_center ? "--outSAMattrRGline ID:$name 'CN:$params.seq_center' 'SM:$name'" : "--outSAMattrRGline ID:$name 'SM:$name'"
           unaligned = params.saveUnaligned ? "--outReadsUnmapped Fastx" : ''
           """
           STAR --genomeDir $index \\
@@ -1188,9 +1189,9 @@ if (!params.skipAlignment) {
               --readFilesCommand zcat \\
               --runDirPerm All_RWX $unaligned \\
               --quantMode TranscriptomeSAM \\
-              --outFileNamePrefix $prefix $seq_center
+              --outFileNamePrefix $name $seq_center
 
-          samtools index ${prefix}Aligned.sortedByCoord.out.bam
+          samtools index ${name}Aligned.sortedByCoord.out.bam
           """
       }
       // Filter removes all 'aligned' channels that fail the check
