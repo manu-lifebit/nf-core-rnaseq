@@ -1668,7 +1668,7 @@ if (!params.skipAlignment) {
             --isoform_level=$params.isoform_level \
             --mcmc_iter=$params.mcmc_iter \
             --mcmc_warmup=$params.mcmc_warmup \
-            --n_cores=${task.cpus}
+            --n_cores=${task.cpus}  &> sterrout.txt
             """
     }
 
