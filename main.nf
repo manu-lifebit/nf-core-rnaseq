@@ -1652,7 +1652,7 @@ if (!params.skipAlignment) {
                 file("*") from rsem_results_isoforms_hbadeals.collect()
 
             output:
-                file("${contrast_id}.csv") into hbadeals_results_isoforms
+                file("*") into hbadeals_results_isoforms
 
             when:
             !params.skip_rsem && !params.skip_hbadeals
