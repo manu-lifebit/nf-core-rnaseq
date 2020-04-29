@@ -173,7 +173,7 @@ message('N minority class : ', N_minority_class , appendLF = FALSE)
 control_ids <- metaData[[sample_colname]][metaData[[status_colname]] == 1]
 cases_ids   <- metaData[[sample_colname]][metaData[[status_colname]] == 2]
 
-essage('dim(countsData)[1] before transcript exclusion: ', dim(countsData)[1])
+message('dim(countsData)[1] before transcript exclusion: ', dim(countsData)[1])
 
 message("\nApplying exclusion criterion 1: discard transcripts with zero counts across samples (zeroes tolerance threshold on minority class is set to ", zeroes_threshold, ")")
 countsData <- countsData[rowSums(countsData[, colnames(countsData) == control_ids ] > 0) >= N_minority_class * zeroes_threshold, ]
