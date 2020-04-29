@@ -30,13 +30,17 @@ if("--help" %in% args | "help" %in% args | (length(args) == 0) | (length(args) =
           
          --help                     - you are reading it
          
-      Optionnal arguments:
+      Optional arguments:
           --sample_colname=chr      - Column name in the metadata file that contains the SRR id, default: 'sample_id'
           --status_colname=chr      - Column name in the metadata file with the control,case status information, default: 'status'
-          --n_cores=value           - Number of cores for hbadeals::hbadeals(), default: 2
+          --n_cores=int             - Number of cores for hbadeals::hbadeals(), default: 2
           --isoform_level=boolean   - TRUE or FALSE. Check ?hbadeals::hbadeals, default: TRUE
-          --mcmc_warmup=value       - Number of warmup iterations for MCMC. Check ?hbadeals::hbadeals for recommended value, default: 20
-          --mcmc_iter=value         - Number of iterations for MCMC. Check ?hbadeals::hbadeals for recommended value, default: 100
+          --mcmc_warmup=int         - Number of warmup iterations for MCMC. Check ?hbadeals::hbadeals for recommended value, default: 20
+          --mcmc_iter=int           - Number of iterations for MCMC. Check ?hbadeals::hbadeals for recommended value, default: 100
+
+          --zeroes_threshold=float  - Fraction expressed as float, default: 0.1
+                                      Example: 0.1 for allowing 10% of observations of the minority class to have zero counts
+                                      in a transcript to not discard it from the countsData table.
           
      Usage:
       
@@ -61,27 +65,28 @@ args         <- argsL
 rm(argsL)
 
 ## Give some value to optional arguments if not provided
-if(is.null(args$sample_colname)) {args$sample_colname = "sample_id"}  else {args$sample_colname=as.character(args$sample_colname)}
-if(is.null(args$status_colname)) {args$status_colname = "status"}     else {args$status_colname=as.character(args$status_colname)}
-if(is.null(args$isoform_level))  {args$isoform_level  = TRUE}         else {args$isoform_level=as.logical(args$isoform_level)}
-if(is.null(args$n_cores))        {args$n_cores        = 2}            else {args$n_cores=as.numeric(args$n_cores)}
-if(is.null(args$mcmc_warmup))    {args$mcmc_warmup    = 20}           else {args$mcmc_warmup=as.numeric(args$mcmc_warmup)}
-if(is.null(args$mcmc_iter))      {args$mcmc_iter      = 100}          else {args$mcmc_iter=as.numeric(args$mcmc_iter)}
+if(is.null(args$sample_colname))  {args$sample_colname   = "sample_id"} else {args$sample_colname=as.character(args$sample_colname)}
+if(is.null(args$status_colname))  {args$status_colname   = "status"}    else {args$status_colname=as.character(args$status_colname)}
+if(is.null(args$isoform_level))   {args$isoform_level    = TRUE}        else {args$isoform_level=as.logical(args$isoform_level)}
+if(is.null(args$n_cores))         {args$n_cores          = 2}           else {args$n_cores=as.numeric(args$n_cores)}
+if(is.null(args$mcmc_warmup))     {args$mcmc_warmup      = 20}          else {args$mcmc_warmup=as.numeric(args$mcmc_warmup)}
+if(is.null(args$mcmc_iter))       {args$mcmc_iter        = 100}         else {args$mcmc_iter=as.numeric(args$mcmc_iter)}
+if(is.null(args$zeroes_threshold)){args$zeroes_threshold = 0.1}         else {args$zeroes_threshold=as.numeric(args$zeroes_threshold)}
 
 cat("\n")
 cat("ARGUMENTS SUMMARY")
 cat("\n")
-cat("rsem_folder      : ", args$rsem_folder,    "\n",sep="")
-cat("metadata         : ", args$metadata,        "\n",sep="")
-cat("sample_colname   : ", args$sample_colname,  "\n",sep="")
-cat("status_colname   : ", args$status_colname,  "\n",sep="")
+cat("rsem_folder      : ", args$rsem_folder     ,"\n",sep="")
+cat("metadata         : ", args$metadata        ,"\n",sep="")
+cat("sample_colname   : ", args$sample_colname  ,"\n",sep="")
+cat("status_colname   : ", args$status_colname  ,"\n",sep="")
 cat("rsem_file_suffix : ", args$rsem_file_suffix,"\n",sep="")
 cat("output           : ", args$output          ,"\n",sep="")
-cat("n_cores          : ", args$n_cores,         "\n",sep="")
-cat("isoform_level    : ", args$isoform_level,   "\n",sep="")
-cat("mcmc_warmup      : ", args$mcmc_warmup,     "\n",sep="")
-cat("mcmc_iter        : ", args$mcmc_iter,       "\n",sep="")
-
+cat("n_cores          : ", args$n_cores         ,"\n",sep="")
+cat("isoform_level    : ", args$isoform_level   ,"\n",sep="")
+cat("mcmc_warmup      : ", args$mcmc_warmup     ,"\n",sep="")
+cat("mcmc_iter        : ", args$mcmc_iter       ,"\n",sep="")
+cat("zeroes_threshold : ", args$zeroes_threshold,"\n",sep="")
 
 # Facilitates testing
 rsem_folder        <- args$rsem_folder
@@ -94,6 +99,7 @@ n_cores            <- args$n_cores
 isoform_level      <- args$isoform_level
 mcmc_warmup        <- args$mcmc_warmup
 mcmc_iter          <- args$mcmc_iter
+zeroes_threshold   <- args$zeroes_threshold
 
 ############################## LIBRARIES SECTION #############################
 
@@ -152,16 +158,39 @@ all      <- colnames(countsData)
 toRemove <- c("transcript_id","gene_id")
 toKeep   <- all [!all  %in% toRemove]
 
-# Apply exclusion criterion 1: Filter out transcripts with cumsum across samples lower than the N, cohort size
-# message("\nApplying exclusion criterion 1:  ( discard transcripts with very low count across samples) ..")
-countsData <- countsData[rowSums(countsData[,toKeep] > 0 ) >= sample_size, ]
-# message("Done!")
+# Apply exclusion criterion 1:
+# Discard transcripts with zero counts across samples (zeroes tolerance threshold on minority class is set to zeroes_threshold)
+message("\nApplying exclusion criterion 1: discard transcripts with zero counts across samples (zeroes tolerance threshold on minority class is set to ", zeroes_threshold, ")")
+
+N_controls       <- length(metaData[[status_colname]][metaData[[status_colname]] == 1])
+N_cases          <- length(metaData[[status_colname]][metaData[[status_colname]] == 2])
+N_minority_class <- min(N_controls, N_cases)
+
+message('N controls       : ', N_controls       , appendLF = FALSE)
+message('N cases          : ', N_cases          , appendLF = FALSE)
+message('N minority class : ', N_minority_class , appendLF = FALSE)
+
+control_ids <- metaData[[sample_colname]][metaData[[status_colname]] == 1]
+cases_ids   <- metaData[[sample_colname]][metaData[[status_colname]] == 2]
+
+essage('dim(countsData)[1] before transcript exclusion: ', dim(countsData)[1])
+
+message("\nApplying exclusion criterion 1: discard transcripts with zero counts across samples (zeroes tolerance threshold on minority class is set to ", zeroes_tolerance_threshold, ")")
+countsData <- countsData[rowSums(countsData[, colnames(countsData) == control_ids ] > 0) >= N_minority_class * zeroes_tolerance_threshold, ]
+message('dim(countsData)[1] after applying transcript exclusion based on control: ', dim(countsData)[1])
+
+countsData <- countsData[rowSums(countsData[, colnames(countsData) == cases_ids   ] > 0) >= N_minority_class * zeroes_tolerance_threshold, ]
+message('dim(countsData)[1] after applying transcript exclusion based on cases: ', dim(countsData)[1])
+
+
+message("Done!")
 
 # Apply exclusion criterion 2: Filter out transcripts with only one isoform
-# message("\nApplying exclusion criterion 2: ( keep > 1 isoform transcripts) ..")
+message("\nApplying exclusion criterion 2: ( keep > 1 isoform transcripts) ..")
 num.iso=unlist(lapply(countsData$gene_id, function(x){sum(countsData$gene_id %in% x)}))
+message('dim(countsData)[1] before gene exclusion based on number of isoforms: ', dim(countsData)[1])
 countsData <- countsData[num.iso > 1, ]
-# message("Done!")
+message('dim(countsData)[1] before gene exclusion based on number of isoforms ( > 1): ', dim(countsData)[1])
 
 # Reorder countsData columns by metaData order !DANGEROUS TO RELY ON INDEXES!
 # message("\nOrdering 'countsData' columns according to 'metaData$sample_id' order ..")
@@ -169,8 +198,8 @@ toKeepInOrder <- c( "gene_id", "transcript_id", as.vector(metaData$sample_id) )
 countsData    <- countsData[, toKeepInOrder]
 # message("Done!")
 write.table(countsData,
-            file = paste0("countsData_", output),
-            sep       =',',
+            file      = paste0("countsData_", output, ".csv"),
+            sep       = ',',
             quote     = F,
             col.names = T,
             row.names = F)
@@ -188,8 +217,8 @@ res <-hbadeals::hbadeals(countsData     = countsData,
 # Write results in file
 # message('\nWriting  hbadeals::hbadeals() results to a file..')
 write.table(res,
-            file = paste0(output),
-            sep       =',',
+            file = paste0(output, ".csv"),
+            sep       = ',',
             quote     = F,
             col.names = T,
             row.names = F)

@@ -1668,6 +1668,7 @@ if (!params.skipAlignment) {
             --isoform_level=$params.isoform_level \
             --mcmc_iter=$params.mcmc_iter \
             --mcmc_warmup=$params.mcmc_warmup \
+            --zeroes_threshold=$params.zeroes_threshold \
             --n_cores=${task.cpus}  &> sterrout.txt
             """
     }
