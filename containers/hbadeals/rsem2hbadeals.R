@@ -38,8 +38,8 @@ if("--help" %in% args | "help" %in% args | (length(args) == 0) | (length(args) =
           --mcmc_warmup=int         - Number of warmup iterations for MCMC. Check ?hbadeals::hbadeals for recommended value, default: 20
           --mcmc_iter=int           - Number of iterations for MCMC. Check ?hbadeals::hbadeals for recommended value, default: 100
 
-          --zeroes_threshold=float  - Fraction expressed as float, default: 0.1
-                                      Example: 0.1 for allowing 10% of observations of the minority class to have zero counts
+          --zeroes_threshold=float  - Fraction expressed as float, default: 0.9
+                                      Example: 0.9 for allowing 10% of observations of the minority class to have zero counts
                                       in a transcript to not discard it from the countsData table.
           
      Usage:
@@ -71,7 +71,7 @@ if(is.null(args$isoform_level))   {args$isoform_level    = TRUE}        else {ar
 if(is.null(args$n_cores))         {args$n_cores          = 2}           else {args$n_cores=as.numeric(args$n_cores)}
 if(is.null(args$mcmc_warmup))     {args$mcmc_warmup      = 20}          else {args$mcmc_warmup=as.numeric(args$mcmc_warmup)}
 if(is.null(args$mcmc_iter))       {args$mcmc_iter        = 100}         else {args$mcmc_iter=as.numeric(args$mcmc_iter)}
-if(is.null(args$zeroes_threshold)){args$zeroes_threshold = 0.1}         else {args$zeroes_threshold=as.numeric(args$zeroes_threshold)}
+if(is.null(args$zeroes_threshold)){args$zeroes_threshold = 0.9}         else {args$zeroes_threshold=as.numeric(args$zeroes_threshold)}
 
 cat("\n")
 cat("ARGUMENTS SUMMARY")
