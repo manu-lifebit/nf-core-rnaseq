@@ -1584,8 +1584,9 @@ if (!params.skipAlignment) {
 
             output:
                 file("*.genes.results") into rsem_results_genes
-                file("*.isoforms.results") into (rsem_results_isoforms, rsem_results_isoforms_hbadeals)
+                file("*.isoforms.results") into rsem_results_isoforms
                 file("*.stat") into rsem_logs
+                file("isoforms_results.tar.gz") into (rsem_results_isoforms_hbadeals, rsem_results_isoforms_hbadeals_view)
 
             script:
             sample_name = bam_file.baseName - 'Aligned.toTranscriptome.out' - '_subsamp'
@@ -1600,8 +1601,12 @@ if (!params.skipAlignment) {
             ${bam_file} \
             rsem/\$REF_NAME \
             ${sample_name}
+
+            tar -czvf isoforms_results.tar.gz *.isoforms.results
             """
     }
+
+    rsem_results_isoforms_hbadeals_view.view()
 
     /**
     * Step 12 - merge RSEM TPM
@@ -1645,11 +1650,12 @@ if (!params.skipAlignment) {
     process hbadeals {
             tag "${contrast_id}"
             label "hbadeals"
-            publishDir "${params.outdir}/hbadeals", mode: "${params.publish_dir_mode}"
+            publishDir "${params.outdir}/hbadeals/${contrast_id}", mode: "${params.publish_dir_mode}"
+            echo true
 
             input:
                 set val(contrast_id), file(metadata) from ch_hbadeals_metadata
-                file("*") from rsem_results_isoforms_hbadeals.collect()
+                each file("isoforms_results.tar.gz") from rsem_results_isoforms_hbadeals
 
             output:
                 file("*") into hbadeals_results_isoforms
@@ -1660,6 +1666,10 @@ if (!params.skipAlignment) {
 
             script:
             """
+            echo 'metadata file:' $metadata
+            ls -l
+            tar -czvf isoforms_results.tar.gz *.isoforms.results && rm isoforms_results.tar.gz
+
             rsem2hbadeals.R \
             --rsem_folder='.' \
             --metadata=$metadata \
@@ -1669,7 +1679,7 @@ if (!params.skipAlignment) {
             --mcmc_iter=$params.mcmc_iter \
             --mcmc_warmup=$params.mcmc_warmup \
             --zeroes_threshold=$params.zeroes_threshold \
-            --n_cores=${task.cpus}  &> sterrout.txt
+            --n_cores=${task.cpus}  &> sterrout_${contrast_id}.txt
             """
     }
 
