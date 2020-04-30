@@ -128,7 +128,7 @@ if(! (all(unique(metaData[[status_colname]]) %in% accepted_status_labels_chr)) )
 # Convert to control,case to 1,2 as requested in hbadeals::hbadeals()
 metaData[[status_colname]] <- ifelse( metaData[[status_colname]] == "control", 1, 2)
 colnames(metaData)  <- c("sample_id", "status")
-`
+
 # Get paths of RSEM files
 isoform_individual_files <- list.files(rsem_folder,
                                        full.names = TRUE,
