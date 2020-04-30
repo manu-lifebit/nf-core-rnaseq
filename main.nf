@@ -1657,7 +1657,8 @@ if (!params.skipAlignment) {
                 each file("isoforms_results.tar.gz") from rsem_results_isoforms_hbadeals
 
             output:
-                file("*") into hbadeals_results_isoforms
+                file("*csv")
+                file("*txt")
 
             when:
             !params.skip_rsem && !params.skip_hbadeals
