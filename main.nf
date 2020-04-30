@@ -1586,7 +1586,6 @@ if (!params.skipAlignment) {
                 file("*.genes.results") into rsem_results_genes
                 file("*.isoforms.results") into rsem_results_isoforms
                 file("*.stat") into rsem_logs
-                file("isoforms_results.tar.gz") into (rsem_results_isoforms_hbadeals, rsem_results_isoforms_hbadeals_view)
 
             script:
             sample_name = bam_file.baseName - 'Aligned.toTranscriptome.out' - '_subsamp'
@@ -1601,12 +1600,8 @@ if (!params.skipAlignment) {
             ${bam_file} \
             rsem/\$REF_NAME \
             ${sample_name}
-
-            tar -czvf isoforms_results.tar.gz *.isoforms.results
             """
     }
-
-    rsem_results_isoforms_hbadeals_view.view()
 
     /**
     * Step 12 - merge RSEM TPM
@@ -1623,6 +1618,7 @@ if (!params.skipAlignment) {
         output:
             file("rsem_tpm_gene.txt")
             file("rsem_tpm_isoform.txt")
+            file("isoforms_results.tar.gz") into (rsem_results_isoforms_hbadeals, rsem_results_isoforms_hbadeals_view)
 
         script:
         """
@@ -1641,8 +1637,11 @@ if (!params.skipAlignment) {
         done
         paste gene_ids.txt tmp_genes/*.tpm.txt > rsem_tpm_gene.txt
         paste transcript_ids.txt tmp_isoforms/*.tpm.txt > rsem_tpm_isoform.txt
+
+        tar czvf isoforms_results.tar.gz *.isoforms.results
         """
     }
+    rsem_results_isoforms_hbadeals_view.view()
 
     /**
      * Step HBA-DEALS
@@ -1668,7 +1667,7 @@ if (!params.skipAlignment) {
             """
             echo 'metadata file:' $metadata
             ls -l
-            tar -xzvf isoforms_results.tar.gz *.isoforms.results && rm isoforms_results.tar.gz
+            tar xzvf isoforms_results.tar.gz && rm isoforms_results.tar.gz
 
             rsem2hbadeals.R \
             --rsem_folder='.' \
