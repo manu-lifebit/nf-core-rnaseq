@@ -128,11 +128,29 @@ if(! (all(unique(metaData[[status_colname]]) %in% accepted_status_labels_chr)) )
 # Convert to control,case to 1,2 as requested in hbadeals::hbadeals()
 metaData[[status_colname]] <- ifelse( metaData[[status_colname]] == "control", 1, 2)
 colnames(metaData)  <- c("sample_id", "status")
-
+`
 # Get paths of RSEM files
 isoform_individual_files <- list.files(rsem_folder,
                                        full.names = TRUE,
                                        pattern    = rsem_file_suffix)
+
+# Select only the .isoform.results files that match the metadata
+cohort_srr_ids <- as.vector(metaData$sample_id)
+filesToKeep    <- paste0("./", cohort_srr_ids, rsem_file_suffix)
+isoform_individual_files <- isoform_individual_files[isoform_individual_files %in% filesToKeep]
+
+
+# Some samples might have been lost (eg. is not paired end like SRR3623945 - causes exit status 255 in fasterq-dump)
+samplesToKeep <- isoform_individual_files
+samplesToKeep <- gsub(rsem_file_suffix, "", samplesToKeep)
+samplesToKeep <- gsub('./', "", samplesToKeep)
+
+
+# Keep only sample ids in metadata for SRR files present
+metaData <- metaData[metaData$sample_id %in% samplesToKeep, ]
+
+# Order metadata so ass the first rows are the controls eg. 1,1,1,2,2
+metaData <- metaData[order(metaData$status, decreasing=FALSE),]
 
 # Keep 'gene_id' and 'transcript_id' columns only (scaffold to build collective countsData csv from all samples)
 countsData  <- read.table(isoform_individual_files[1], header=TRUE)
@@ -166,16 +184,15 @@ N_controls       <- length(metaData[[status_colname]][metaData[[status_colname]]
 N_cases          <- length(metaData[[status_colname]][metaData[[status_colname]] == 2])
 N_minority_class <- min(N_controls, N_cases)
 
-message('N controls       : ', N_controls       , appendLF = FALSE)
-message('N cases          : ', N_cases          , appendLF = FALSE)
-message('N minority class : ', N_minority_class , appendLF = FALSE)
+message('N controls       : ', N_controls       )
+message('N cases          : ', N_cases          )
+message('N minority class : ', N_minority_class )
 
 control_ids <- metaData[[sample_colname]][metaData[[status_colname]] == 1]
 cases_ids   <- metaData[[sample_colname]][metaData[[status_colname]] == 2]
 
 message('dim(countsData)[1] before transcript exclusion: ', dim(countsData)[1])
 
-message("\nApplying exclusion criterion 1: discard transcripts with zero counts across samples (zeroes tolerance threshold on minority class is set to ", zeroes_threshold, ")")
 countsData <- countsData[rowSums(countsData[, colnames(countsData) == control_ids ] > 0) > N_minority_class * zeroes_threshold, ]
 message('dim(countsData)[1] after applying transcript exclusion based on control: ', dim(countsData)[1])
 
