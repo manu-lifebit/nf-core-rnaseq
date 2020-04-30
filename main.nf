@@ -1668,7 +1668,7 @@ if (!params.skipAlignment) {
             """
             echo 'metadata file:' $metadata
             ls -l
-            tar -czvf isoforms_results.tar.gz *.isoforms.results && rm isoforms_results.tar.gz
+            tar -xzvf isoforms_results.tar.gz *.isoforms.results && rm isoforms_results.tar.gz
 
             rsem2hbadeals.R \
             --rsem_folder='.' \
