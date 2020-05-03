@@ -389,35 +389,26 @@ if(!params.accessionList) {
             .ifEmpty { exit 1, "Cannot find any reads matching: ${params.reads}\nNB: Path needs to be enclosed in quotes!\nNB: Path requires at least one * wildcard!\nIf this is single-end data, please specify --single_end on the command line." }
             .into { raw_reads_inspect ; raw_reads_fastqc; raw_reads_trimgalore }
     }
-
 raw_reads_inspect.view()
 }
 
-if(params.accessionList) {
-    Channel
-        .fromPath( params.accessionList )
-        .splitText()
-        .map{ it.trim() }
-        .dump(tag: 'AccessionList content')
-        .ifEmpty { exit 1, "Accession list file not found in the location defined by --accessionList. Is the file path correct?" }
-        .into { accessionIDs_inspect ; accessionIDs }
+/*
+ *  Create channel for the sra-tools accession list
+ */
 
-    accessionIDs_inspect.view()
-}
-
+// Input list .csv file of many .csv files when hbadeals is not skipped
+if(params.accessionList) { Channel.fromPath( params.accessionList ).ifEmpty { exit 1, "Input accession list not found at ${params.accessionList}. Is the file path correct?" } }
+if(params.accessionList) { accessionIDs = Channel.fromPath( params.accessionList ).splitText().map{ it -> it.trim() } }
 
 /*
  *  Create channel for the HBA-DEALS metadata contrasts
  */
 
-// Input list .csv file of many .csv files
-if (params.hbadeals_metadata.endsWith(".csv")) {
-  Channel.fromPath(params.hbadeals_metadata)
-                        .ifEmpty { exit 1, "Input master file .csv of .csv metadata files not found at ${params.hbadeals_metadata} or the suffix is not .csv. Is the file path correct?" }
-                        .splitCsv(sep: ',' , skip: 1)
-                        .map { unique_id, path -> tuple("contrast_"+unique_id, file(path)) }
-                        .set { ch_hbadeals_metadata }
-  }
+if (!params.skip_hbadeals) {
+    if( params.hbadeals_metadata)                  { Channel.fromPath( params.hbadeals_metadata ).ifEmpty { exit 1, "Input master file .csv of .csv metadata files not found at ${params.hbadeals_metadata}. Is the file path correct?" } }
+    if(!params.hbadeals_metadata.endsWith(".csv")) { exit 1, "Input master file defined with --hbadeals_metadata must have a .csv suffix. Please rename your file accordingly and retry." }
+    if(!params.skip_hbadeals)                      { ch_hbadeals_metadata = Channel.fromPath( params.ch_hbadeals_metadata ).splitCsv(sep: ',' , skip: 1).map { unique_id, path -> tuple("contrast_"+unique_id, file(path)) } }
+}
 
 // Header log info
 log.info nfcoreHeader()
@@ -426,7 +417,8 @@ if (workflow.revision) summary['Pipeline Release'] = workflow.revision
 summary['Run Name'] = custom_runName ?: workflow.runName
 if (!params.accessionList) summary['Reads'] = params.reads
 summary['Data Type'] = params.single_end ? 'Single-End' : 'Paired-End'
-if (params.accessionList) summary['SRA accession '] = params.accessionList
+if (params.accessionList) summary['SRA accession'] = params.accessionList
+if (params.hbadeals_metadata) summary['HBA-DEALS metadata'] = params.hbadeals_metadata
 if (params.genome) summary['Genome'] = params.genome
 if (params.pico) summary['Library Prep'] = "SMARTer Stranded Total RNA-Seq Kit - Pico Input"
 summary['Strandedness'] = (unStranded ? 'None' : forwardStranded ? 'Forward' : reverseStranded ? 'Reverse' : 'None')
@@ -919,30 +911,27 @@ if (params.pseudo_aligner == 'salmon' && !params.salmon_index) {
 
 
 /*
- * STEP  - Get accession samples from SRA
- */
+* STEP  - Get accession samples from SRA
+*/
 
 if (params.accessionList) {
-
     process getAccession {
         tag "${accession}"
-        
+
         input:
         val(accession) from accessionIDs
-        
+
         output:
         set val(accession), file("*.fastq.gz") into (raw_reads_inspect, raw_reads_fastqc, raw_reads_trimgalore)
-        
+
         script:
         """
         fasterq-dump $accession --threads ${task.cpus} --split-3
         pigz *.fastq
         """
-    }
+     }
     raw_reads_inspect.view()
 }
-
-
 /*
  * STEP 1 - FastQC
  */
@@ -1023,7 +1012,7 @@ if (!params.skipTrimming) {
  */
 if (!params.removeRiboRNA) {
     trimgalore_reads
-        .into { trimmed_reads_inspect ; trimmed_reads_alignment; trimmed_reads_salmon }
+        .into { trimmed_reads_alignment; trimmed_reads_salmon ; trimmed_reads_inspect }
     sortmerna_logs = Channel.empty()
     trimmed_reads_inspect.view()
 } else {
@@ -1640,51 +1629,48 @@ if (!params.skipAlignment) {
 
         tar czvf isoforms_results.tar.gz *.isoforms.results
         """
-    }
     rsem_results_isoforms_hbadeals_view.view()
-
-    /**
-     * Step HBA-DEALS
-     */
-    process hbadeals {
-            tag "${contrast_id}"
-            label "hbadeals"
-            publishDir "${params.outdir}/hbadeals/${contrast_id}", mode: "${params.publish_dir_mode}"
-            echo true
-
-            input:
-                set val(contrast_id), file(metadata) from ch_hbadeals_metadata
-                each file("isoforms_results.tar.gz") from rsem_results_isoforms_hbadeals
-
-            output:
-                file("*csv")
-                file("*txt")
-
-            when:
-            !params.skip_rsem && !params.skip_hbadeals
-
-
-            script:
-            """
-            echo 'metadata file:' $metadata
-            ls -l
-            tar xzvf isoforms_results.tar.gz && rm isoforms_results.tar.gz
-
-            rsem2hbadeals.R \
-            --rsem_folder='.' \
-            --metadata=$metadata \
-            --rsem_file_suffix=$params.rsem_file_suffix \
-            --output=$contrast_id \
-            --isoform_level=$params.isoform_level \
-            --mcmc_iter=$params.mcmc_iter \
-            --mcmc_warmup=$params.mcmc_warmup \
-            --zeroes_threshold=$params.zeroes_threshold \
-            --n_cores=${task.cpus}  &> sterrout_${contrast_id}.txt
-            """
     }
-
   } else {
       rsem_logs = Channel.from(false)
+  }
+
+/*
+ * Step HBA-DEALS
+ */
+ if(!params.skip_hbadeals) {
+    process hbadeals {
+        tag "${contrast_id}"
+        label "hbadeals"
+        publishDir "${params.outdir}/hbadeals/${contrast_id}", mode: "${params.publish_dir_mode}"
+        echo true
+
+        input:
+            set val(contrast_id), file(metadata) from ch_hbadeals_metadata
+            each file("isoforms_results.tar.gz") from rsem_results_isoforms_hbadeals
+
+        output:
+            file("*csv")
+            file("*txt")
+
+        script:
+        """
+        echo 'metadata file:' $metadata
+        ls -l
+        tar xzvf isoforms_results.tar.gz && rm isoforms_results.tar.gz
+
+        rsem2hbadeals.R \
+        --rsem_folder='.' \
+        --metadata=$metadata \
+        --rsem_file_suffix=$params.rsem_file_suffix \
+        --output=$contrast_id \
+        --isoform_level=$params.isoform_level \
+        --mcmc_iter=$params.mcmc_iter \
+        --mcmc_warmup=$params.mcmc_warmup \
+        --zeroes_threshold=$params.zeroes_threshold \
+        --n_cores=${task.cpus}  &> sterrout_${contrast_id}.txt
+        """
+    }
   }
 
   /*
@@ -2083,7 +2069,7 @@ workflow.onComplete {
                 break;
             }
         }
-        log.info "[${c_purple}nf-core/rnaseq${c_reset}] \n${c_green}${good_alignment_scores.size()}/$total_aln_count samples passed minimum ${params.percent_aln_skip}% aligned check\n${samp_aln}${c_reset}"
+        log.info "[${c_purple}nf-core/rnaseq${c_reset}] ${c_green}${good_alignment_scores.size()}/$total_aln_count samples passed minimum ${params.percent_aln_skip}% aligned check\n${samp_aln}${c_reset}"
     }
     if (poor_alignment_scores.size() > 0){
         samp_aln = ''
