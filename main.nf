@@ -398,7 +398,7 @@ raw_reads_inspect.view()
 
 // Input list .csv file of many .csv files when hbadeals is not skipped
 if(params.accessionList) { Channel.fromPath( params.accessionList ).ifEmpty { exit 1, "Input accession list not found at ${params.accessionList}. Is the file path correct?" } }
-if(params.accessionList) { accessionIDs = Channel.fromPath( params.accessionList ).splitText().map{ it -> it.trim() } }
+if(params.accessionList) { accessionIDs = Channel.fromPath( params.accessionList ).splitText().unique().map{ it -> it.trim() } }
 
 /*
  *  Create channel for the HBA-DEALS metadata contrasts
