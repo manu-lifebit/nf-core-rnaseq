@@ -911,9 +911,8 @@ if (params.pseudo_aligner == 'salmon' && !params.salmon_index) {
 
 
 /*
-* STEP  - Get accession samples from SRA
+ * STEP  - Get accession samples from SRA
 */
-
 if (params.accessionList) {
     process getAccession {
         tag "${accession}"
@@ -1629,8 +1628,8 @@ if (!params.skipAlignment) {
 
         tar czvf isoforms_results.tar.gz *.isoforms.results
         """
-    rsem_results_isoforms_hbadeals_view.view()
     }
+    rsem_results_isoforms_hbadeals_view.view()
   } else {
       rsem_logs = Channel.from(false)
   }
