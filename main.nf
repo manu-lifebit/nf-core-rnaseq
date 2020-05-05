@@ -1628,7 +1628,7 @@ if (!params.skipAlignment) {
 
         mkdir isoforms_results_dir
         cp *.isoforms.results isoforms_results_dir/ && cd isoforms_results_dir
-        tar czvf isoforms_results.tar.gz *.isoforms.results
+        tar czvf isoforms_results.tar.gz *.isoforms.results && cd -
         mv isoforms_results_dir/isoforms_results.tar.gz .
         """
     }
