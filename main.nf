@@ -1627,8 +1627,9 @@ if (!params.skipAlignment) {
         paste transcript_ids.txt tmp_isoforms/*.tpm.txt > rsem_tpm_isoform.txt
 
         mkdir isoforms_results_dir
-        cp *.isoforms.results isoforms_results_dir/
-        tar czvf isoforms_results.tar.gz isoforms_results_dir/*.isoforms.results
+        cp *.isoforms.results isoforms_results_dir/ && cd isoforms_results_dir
+        tar czvf isoforms_results.tar.gz *.isoforms.results
+        mv isoforms_results_dir/isoforms_results.tar.gz .
         """
     }
     rsem_results_isoforms_hbadeals_view.view()
