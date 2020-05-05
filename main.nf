@@ -497,11 +497,6 @@ Channel.from(summary.collect{ [it.key, it.value] })
  * Parse software version numbers
  */
 process get_software_versions {
-    publishDir "${params.outdir}/pipeline_info", mode: "${params.publish_dir_mode}",
-        saveAs: { filename ->
-            if (filename.indexOf(".csv") > 0) filename
-            else null
-        }
 
     output:
     file 'software_versions_mqc.yaml' into ch_software_versions_yaml
@@ -550,8 +545,6 @@ if (compressedReference) {
   if (params.fasta && (alignment_no_indices || pseudoalignment_no_indices)) {
     process gunzip_genome_fasta {
         tag "$gz"
-        publishDir path: { params.saveReference ? "${params.outdir}/reference_genome" : params.outdir },
-                   saveAs: { params.saveReference ? it : null }, mode: "${params.publish_dir_mode}"
 
         input:
         file gz from genome_fasta_gz
@@ -569,8 +562,6 @@ if (compressedReference) {
   if (params.gtf) {
     process gunzip_gtf {
         tag "$gz"
-        publishDir path: { params.saveReference ? "${params.outdir}/reference_genome" : params.outdir },
-                   saveAs: { params.saveReference ? it : null }, mode: "${params.publish_dir_mode}"
 
         input:
         file gz from gtf_gz
@@ -589,8 +580,6 @@ if (compressedReference) {
   if (params.gff && !params.gtf) {
     process gunzip_gff {
         tag "$gz"
-        publishDir path: { params.saveReference ? "${params.outdir}/reference_genome" : params.outdir },
-                   saveAs: { params.saveReference ? it : null }, mode: "${params.publish_dir_mode}"
 
         input:
         file gz from gff_gz
@@ -607,8 +596,6 @@ if (compressedReference) {
   if (params.transcript_fasta && params.pseudo_aligner == 'salmon' && !params.salmon_index) {
     process gunzip_transcript_fasta {
         tag "$gz"
-        publishDir path: { params.saveReference ? "${params.outdir}/reference_transcriptome" : params.outdir },
-                   saveAs: { params.saveReference ? it : null }, mode: "${params.publish_dir_mode}"
 
         input:
         file gz from transcript_fasta_gz
@@ -625,8 +612,6 @@ if (compressedReference) {
   if (params.bed12) {
     process gunzip_bed12 {
         tag "$gz"
-        publishDir path: { params.saveReference ? "${params.outdir}/reference_genome" : params.outdir },
-                   saveAs: { params.saveReference ? it : null }, mode: "${params.publish_dir_mode}"
 
         input:
         file gz from bed12_gz
@@ -643,8 +628,6 @@ if (compressedReference) {
   if (!params.skipAlignment && params.star_index && params.aligner == "star") {
     process gunzip_star_index {
         tag "$gz"
-        publishDir path: { params.saveReference ? "${params.outdir}/reference_genome/star" : params.outdir },
-                   saveAs: { params.saveReference ? it : null }, mode: "${params.publish_dir_mode}"
 
         input:
         file gz from star_index_gz
@@ -662,8 +645,6 @@ if (compressedReference) {
   if (!params.skipAlignment && params.hisat2_index && params.aligner == 'hisat2') {
     process gunzip_hisat_index {
         tag "$gz"
-        publishDir path: { params.saveReference ? "${params.outdir}/reference_genome/hisat2" : params.outdir },
-                   saveAs: { params.saveReference ? it : null }, mode: "${params.publish_dir_mode}"
 
         input:
         file gz from hs2_indices_gz
@@ -681,8 +662,6 @@ if (compressedReference) {
   if (params.salmon_index && params.pseudo_aligner == 'salmon') {
     process gunzip_salmon_index {
         tag "$gz"
-        publishDir path: { params.saveReference ? "${params.outdir}/reference_transcriptome/hisat2" : params.outdir },
-                   saveAs: { params.saveReference ? it : null }, mode: "${params.publish_dir_mode}"
 
         input:
         file gz from salmon_index_gz
@@ -705,8 +684,6 @@ if (compressedReference) {
 if (params.gff && !params.gtf) {
     process convertGFFtoGTF {
         tag "$gff"
-        publishDir path: { params.saveReference ? "${params.outdir}/reference_genome" : params.outdir },
-                   saveAs: { params.saveReference ? it : null }, mode: "${params.publish_dir_mode}"
 
         input:
         file gff from gffFile
@@ -728,8 +705,6 @@ if (params.gff && !params.gtf) {
 if (!params.bed12) {
     process makeBED12 {
         tag "$gtf"
-        publishDir path: { params.saveReference ? "${params.outdir}/reference_genome" : params.outdir },
-                   saveAs: { params.saveReference ? it : null }, mode: "${params.publish_dir_mode}"
 
         input:
         file gtf from gtf_makeBED12
@@ -752,8 +727,6 @@ if (!params.skipAlignment) {
       process makeSTARindex {
           label 'high_memory'
           tag "$fasta"
-          publishDir path: { params.saveReference ? "${params.outdir}/reference_genome" : params.outdir },
-                     saveAs: { params.saveReference ? it : null }, mode: "${params.publish_dir_mode}"
 
           input:
           file fasta from ch_fasta_for_star_index
@@ -783,8 +756,6 @@ if (!params.skipAlignment) {
   if (params.aligner == 'hisat2' && !params.splicesites) {
       process makeHisatSplicesites {
           tag "$gtf"
-          publishDir path: { params.saveReference ? "${params.outdir}/reference_genome" : params.outdir },
-                     saveAs: { params.saveReference ? it : null }, mode: "${params.publish_dir_mode}"
 
           input:
           file gtf from gtf_makeHisatSplicesites
@@ -805,8 +776,6 @@ if (!params.skipAlignment) {
   if (params.aligner == 'hisat2' && !params.hisat2_index && params.fasta) {
       process makeHISATindex {
           tag "$fasta"
-          publishDir path: { params.saveReference ? "${params.outdir}/reference_genome" : params.outdir },
-                     saveAs: { params.saveReference ? it : null }, mode: "${params.publish_dir_mode}"
 
           input:
           file fasta from ch_fasta_for_hisat_index
@@ -849,8 +818,6 @@ if (!params.skipAlignment) {
   if (!params.skip_rsem && !params.rsem_reference && params.fasta) {
       process makeRSEMReference {
           tag "$fasta"
-          publishDir path: { params.saveReference ? "${params.outdir}/reference_genome" : params.outdir },
-                     saveAs: { params.saveReference ? it : null }, mode: 'copy'
 
           input:
           file fasta from ch_fasta_for_rsem_reference
@@ -876,9 +843,6 @@ if (params.pseudo_aligner == 'salmon' && !params.salmon_index) {
     if (!params.transcript_fasta) {
         process transcriptsToFasta {
             tag "$fasta"
-            publishDir path: { params.saveReference ? "${params.outdir}/reference_genome" : params.outdir },
-                               saveAs: { params.saveReference ? it : null }, mode: "${params.publish_dir_mode}"
-
 
             input:
             file fasta from ch_fasta_for_salmon_transcripts
@@ -898,8 +862,6 @@ if (params.pseudo_aligner == 'salmon' && !params.salmon_index) {
     process makeSalmonIndex {
         label "salmon"
         tag "$fasta"
-        publishDir path: { params.saveReference ? "${params.outdir}/reference_genome" : params.outdir },
-                           saveAs: { params.saveReference ? it : null }, mode: "${params.publish_dir_mode}"
 
         input:
         file fasta from ch_fasta_for_salmon_index
@@ -943,8 +905,6 @@ if (params.accessionList) {
 process fastqc {
     tag "$name"
     label 'mid_memory'
-    publishDir "${params.outdir}/fastqc", mode: "${params.publish_dir_mode}",
-        saveAs: { filename -> filename.indexOf(".zip") > 0 ? "zips/$filename" : "$filename" }
 
     when:
     !params.skipQC && !params.skipFastQC
@@ -969,14 +929,6 @@ if (!params.skipTrimming) {
     process trim_galore {
         label 'low_memory'
         tag "$name"
-        publishDir "${params.outdir}/trim_galore", mode: "${params.publish_dir_mode}",
-            saveAs: {filename ->
-                if (filename.indexOf("_fastqc") > 0) "FastQC/$filename"
-                else if (filename.indexOf("trimming_report.txt") > 0) "logs/$filename"
-                else if (!params.saveTrimmed && filename == "where_are_my_files.txt") filename
-                else if (params.saveTrimmed && filename != "where_are_my_files.txt") filename
-                else null
-            }
 
         input:
         set val(name), file(reads) from raw_reads_trimgalore
@@ -1042,13 +994,7 @@ if (!params.removeRiboRNA) {
     process sortmerna {
         label 'low_memory'
         tag "$name"
-        publishDir "${params.outdir}/SortMeRNA", mode: "${params.publish_dir_mode}",
-            saveAs: {filename ->
-                if (filename.indexOf("_rRNA_report.txt") > 0) "logs/$filename"
-                else if (params.saveNonRiboRNAReads) "reads/$filename"
-                else null
-            }
-
+ 
         input:
         set val(name), file(reads) from trimgalore_reads
         val(db_name) from sortmerna_db_name.collect()
@@ -1142,14 +1088,6 @@ if (!params.skipAlignment) {
       process star {
           label 'high_memory'
           tag "$name"
-          publishDir "${params.outdir}/STAR", mode: "${params.publish_dir_mode}",
-              saveAs: {filename ->
-                  if (filename.indexOf(".bam") == -1) "logs/$filename"
-                  else if (params.saveUnaligned && filename != "where_are_my_files.txt" && 'Unmapped' in filename) unmapped/filename
-                  else if (!params.saveAlignedIntermediates && filename == "where_are_my_files.txt") filename
-                  else if (params.saveAlignedIntermediates && filename != "where_are_my_files.txt") filename
-                  else null
-              }
 
           input:
           set val(name), file(reads) from trimmed_reads_alignment
@@ -1210,13 +1148,6 @@ if (!params.skipAlignment) {
       process hisat2Align {
           label 'high_memory'
           tag "$name"
-          publishDir "${params.outdir}/HISAT2", mode: "${params.publish_dir_mode}",
-              saveAs: {filename ->
-                  if (filename.indexOf(".hisat2_summary.txt") > 0) "logs/$filename"
-                  else if (!params.saveAlignedIntermediates && filename == "where_are_my_files.txt") filename
-                  else if (params.saveAlignedIntermediates && filename != "where_are_my_files.txt") filename
-                  else null
-              }
 
           input:
           set val(name), file(reads) from trimmed_reads_alignment
@@ -1277,12 +1208,6 @@ if (!params.skipAlignment) {
       process hisat2_sortOutput {
           label 'mid_memory'
           tag "${hisat2_bam.baseName}"
-          publishDir "${params.outdir}/HISAT2", mode: "${params.publish_dir_mode}",
-              saveAs: { filename ->
-                  if (!params.saveAlignedIntermediates && filename == "where_are_my_files.txt") filename
-                  else if (params.saveAlignedIntermediates && filename != "where_are_my_files.txt") "aligned_sorted/$filename"
-                  else null
-              }
 
           input:
           file hisat2_bam
@@ -1313,32 +1238,6 @@ if (!params.skipAlignment) {
   process rseqc {
       label 'mid_memory'
       tag "${bam_rseqc.baseName - '.sorted'}"
-      publishDir "${params.outdir}/rseqc" , mode: "${params.publish_dir_mode}",
-          saveAs: {filename ->
-                   if (filename.indexOf("bam_stat.txt") > 0)                      "bam_stat/$filename"
-              else if (filename.indexOf("infer_experiment.txt") > 0)              "infer_experiment/$filename"
-              else if (filename.indexOf("read_distribution.txt") > 0)             "read_distribution/$filename"
-              else if (filename.indexOf("read_duplication.DupRate_plot.pdf") > 0) "read_duplication/$filename"
-              else if (filename.indexOf("read_duplication.DupRate_plot.r") > 0)   "read_duplication/rscripts/$filename"
-              else if (filename.indexOf("read_duplication.pos.DupRate.xls") > 0)  "read_duplication/dup_pos/$filename"
-              else if (filename.indexOf("read_duplication.seq.DupRate.xls") > 0)  "read_duplication/dup_seq/$filename"
-              else if (filename.indexOf("RPKM_saturation.eRPKM.xls") > 0)         "RPKM_saturation/rpkm/$filename"
-              else if (filename.indexOf("RPKM_saturation.rawCount.xls") > 0)      "RPKM_saturation/counts/$filename"
-              else if (filename.indexOf("RPKM_saturation.saturation.pdf") > 0)    "RPKM_saturation/$filename"
-              else if (filename.indexOf("RPKM_saturation.saturation.r") > 0)      "RPKM_saturation/rscripts/$filename"
-              else if (filename.indexOf("inner_distance.txt") > 0)                "inner_distance/$filename"
-              else if (filename.indexOf("inner_distance_freq.txt") > 0)           "inner_distance/data/$filename"
-              else if (filename.indexOf("inner_distance_plot.r") > 0)             "inner_distance/rscripts/$filename"
-              else if (filename.indexOf("inner_distance_plot.pdf") > 0)           "inner_distance/plots/$filename"
-              else if (filename.indexOf("junction_plot.r") > 0)                   "junction_annotation/rscripts/$filename"
-              else if (filename.indexOf("junction.xls") > 0)                      "junction_annotation/data/$filename"
-              else if (filename.indexOf("splice_events.pdf") > 0)                 "junction_annotation/events/$filename"
-              else if (filename.indexOf("splice_junction.pdf") > 0)               "junction_annotation/junctions/$filename"
-              else if (filename.indexOf("junction_annotation_log.txt") > 0)       "junction_annotation/$filename"
-              else if (filename.indexOf("junctionSaturation_plot.pdf") > 0)       "junction_saturation/$filename"
-              else if (filename.indexOf("junctionSaturation_plot.r") > 0)         "junction_saturation/rscripts/$filename"
-              else filename
-          }
 
       when:
       !params.skipQC && !params.skipRseQC
@@ -1368,7 +1267,6 @@ if (!params.skipAlignment) {
    */
   process preseq {
       tag "${bam_preseq.baseName - '.sorted'}"
-      publishDir "${params.outdir}/preseq", mode: "${params.publish_dir_mode}"
 
       when:
       !params.skipQC && !params.skipPreseq
@@ -1390,8 +1288,6 @@ if (!params.skipAlignment) {
    */
   process markDuplicates {
       tag "${bam.baseName - '.sorted'}"
-      publishDir "${params.outdir}/markDuplicates", mode: "${params.publish_dir_mode}",
-          saveAs: {filename -> filename.indexOf("_metrics.txt") > 0 ? "metrics/$filename" : "$filename"}
 
       when:
       !params.skipQC && !params.skipDupRadar
@@ -1425,7 +1321,6 @@ if (!params.skipAlignment) {
   process qualimap {
       label 'low_memory'
       tag "${bam.baseName}"
-      publishDir "${params.outdir}/qualimap", mode: "${params.publish_dir_mode}"
 
       when:
       !params.skipQC && !params.skipQualimap
@@ -1458,16 +1353,6 @@ if (!params.skipAlignment) {
   process dupradar {
       label 'low_memory'
       tag "${bam_md.baseName - '.sorted.markDups'}"
-      publishDir "${params.outdir}/dupradar", mode: "${params.publish_dir_mode}",
-          saveAs: {filename ->
-              if (filename.indexOf("_duprateExpDens.pdf") > 0) "scatter_plots/$filename"
-              else if (filename.indexOf("_duprateExpBoxplot.pdf") > 0) "box_plots/$filename"
-              else if (filename.indexOf("_expressionHist.pdf") > 0) "histograms/$filename"
-              else if (filename.indexOf("_dupMatrix.txt") > 0) "gene_data/$filename"
-              else if (filename.indexOf("_duprateExpDensCurve.txt") > 0) "scatter_curve_data/$filename"
-              else if (filename.indexOf("_intercept_slope.txt") > 0) "intercepts_slopes/$filename"
-              else "$filename"
-          }
 
       when:
       !params.skipQC && !params.skipDupRadar
@@ -1498,13 +1383,6 @@ if (!params.skipAlignment) {
   process featureCounts {
       label 'low_memory'
       tag "${bam_featurecounts.baseName - '.sorted'}"
-      publishDir "${params.outdir}/featureCounts", mode: "${params.publish_dir_mode}",
-          saveAs: {filename ->
-              if (filename.indexOf("biotype_counts") > 0) "biotype_counts/$filename"
-              else if (filename.indexOf("_gene.featureCounts.txt.summary") > 0) "gene_count_summaries/$filename"
-              else if (filename.indexOf("_gene.featureCounts.txt") > 0) "gene_counts/$filename"
-              else "$filename"
-          }
 
       input:
       file bam_featurecounts
@@ -1543,7 +1421,6 @@ if (!params.skipAlignment) {
   process merge_featureCounts {
       label "mid_memory"
       tag "${input_files[0].baseName - '.sorted'}"
-      publishDir "${params.outdir}/featureCounts", mode: "${params.publish_dir_mode}"
 
       input:
       file input_files from featureCounts_to_merge.collect()
