@@ -1626,7 +1626,9 @@ if (!params.skipAlignment) {
         paste gene_ids.txt tmp_genes/*.tpm.txt > rsem_tpm_gene.txt
         paste transcript_ids.txt tmp_isoforms/*.tpm.txt > rsem_tpm_isoform.txt
 
-        tar czvf isoforms_results.tar.gz *.isoforms.results
+        mkdir isoforms_results_dir
+        cp *.isoforms.results isoforms_results_dir/
+        tar czvf isoforms_results.tar.gz isoforms_results_dir/*.isoforms.results
         """
     }
     rsem_results_isoforms_hbadeals_view.view()
