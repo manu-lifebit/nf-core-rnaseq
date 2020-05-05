@@ -410,6 +410,12 @@ if (!params.skip_hbadeals) {
     if(!params.skip_hbadeals)                      { ch_hbadeals_metadata = Channel.fromPath( params.hbadeals_metadata ).splitCsv(sep: ',' , skip: 1).map { unique_id, path -> tuple("contrast_"+unique_id, file(path)) } }
 }
 
+/*
+ *  Create channel for the HBA-DEALS optional additional archive with
+ */
+if (params.rsem_results_isoforms_archive) { Channel.fromPath( params.rsem_results_isoforms_archive ).ifEmpty { exit 1, "Input file ${params.rsem_results_isoforms_archive} not found at this location "}
+if (params.rsem_results_isoforms_archive) { ch_rsem_isoforms_results_archive = Channel.fromPath( params.rsem_results_isoforms_archive).map {it -> "extra_rsem_isoform_results.tar.gz", it } }
+
 // Header log info
 log.info nfcoreHeader()
 def summary = [:]
@@ -1606,7 +1612,7 @@ if (!params.skipAlignment) {
         output:
             file("rsem_tpm_gene.txt")
             file("rsem_tpm_isoform.txt")
-            file("isoforms_results.tar.gz") into (rsem_results_isoforms_hbadeals, rsem_results_isoforms_hbadeals_view)
+            file("isoforms_results.tar.gz") into ch_rsem_isoforms_results
 
         script:
         """
@@ -1640,7 +1646,35 @@ if (!params.skipAlignment) {
 /*
  * Step HBA-DEALS
  */
- if(!params.skip_hbadeals) {
+
+ if(!params.skip_hbadeals && !params.skip_rsem && params.rsem_results_isoforms_archive) {
+     process aggregateRSEM {
+        tag "${params.rsem_results_isoforms_archive}"
+        label "hbadeals"
+        echo true
+
+        input:
+            file(rsem_extra_archive) from ch_rsem_isoforms_results_archive
+            file(rsem_results_archive) from ch_rsem_isoforms_results
+
+        output:
+            file("isoforms_results.tar.gz") into ch_rsem_results_isoforms_aggregated
+
+        script:
+        """
+        tar xvzf $extra_archive
+        tar xvzf $rsem_results_archive
+
+        tar cvzf isoforms_results.tar.gz *.isoforms.results
+        """
+    }
+
+ }
+
+ if (!params.rsem_results_isoforms_archive) { ch_rsem_results_isoforms_hbadeals = ch_rsem_isoforms_results }
+ if ( params.rsem_results_isoforms_archive) { ch_rsem_results_isoforms_hbadeals = ch_rsem_results_isoforms_aggregated }
+
+ if(!params.skip_hbadeals && !params.skip_rsem) {
     process hbadeals {
         tag "${contrast_id}"
         label "hbadeals"
@@ -1649,7 +1683,7 @@ if (!params.skipAlignment) {
 
         input:
             set val(contrast_id), file(metadata) from ch_hbadeals_metadata
-            each file("isoforms_results.tar.gz") from rsem_results_isoforms_hbadeals
+            each file("isoforms_results.tar.gz") from ch_rsem_results_isoforms_hbadeals
 
         output:
             file("*csv")
