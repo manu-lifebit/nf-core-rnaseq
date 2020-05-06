@@ -413,8 +413,8 @@ if (!params.skip_hbadeals) {
 /*
  *  Create channel for the HBA-DEALS optional additional archive with
  */
-if (params.rsem_results_isoforms_archive) { Channel.fromPath( params.rsem_results_isoforms_archive ).ifEmpty { exit 1, "Input file ${params.rsem_results_isoforms_archive} not found at this location "}
-if (params.rsem_results_isoforms_archive) { ch_rsem_isoforms_results_archive = Channel.fromPath( params.rsem_results_isoforms_archive).map {it -> "extra_rsem_isoform_results.tar.gz", it } }
+if (params.rsem_results_isoforms_archive) { Channel.fromPath( params.rsem_results_isoforms_archive ).ifEmpty { exit 1, "Input file ${params.rsem_results_isoforms_archive} not found at this location " } }
+if (params.rsem_results_isoforms_archive) { ch_rsem_isoforms_results_archive = Channel.fromPath( params.rsem_results_isoforms_archive) }
 
 // Header log info
 log.info nfcoreHeader()
@@ -852,7 +852,7 @@ if (params.pseudo_aligner == 'salmon' && !params.salmon_index) {
             file "*.fa" into ch_fasta_for_salmon_index
 
             script:
-	          // filter_gtf_for_genes_in_genome.py is bundled in this package, in rnaseq/bin
+          // filter_gtf_for_genes_in_genome.py is bundled in this package, in rnaseq/bin
             """
             filter_gtf_for_genes_in_genome.py --gtf $gtf --fasta $fasta -o ${gtf.baseName}__in__${fasta.baseName}.gtf
             gffread -F -w transcripts.fa -g $fasta ${gtf.baseName}__in__${fasta.baseName}.gtf
@@ -1515,76 +1515,10 @@ if (!params.skipAlignment) {
         mv isoforms_results_dir/isoforms_results.tar.gz .
         """
     }
-    rsem_results_isoforms_hbadeals_view.view()
   } else {
       rsem_logs = Channel.from(false)
   }
 
-/*
- * Step HBA-DEALS
- */
-
- if(!params.skip_hbadeals && !params.skip_rsem && params.rsem_results_isoforms_archive) {
-     process aggregateRSEM {
-        tag "${params.rsem_results_isoforms_archive}"
-        label "hbadeals"
-        echo true
-
-        input:
-            file(rsem_extra_archive) from ch_rsem_isoforms_results_archive
-            file(rsem_results_archive) from ch_rsem_isoforms_results
-
-        output:
-            file("isoforms_results.tar.gz") into ch_rsem_results_isoforms_aggregated
-
-        script:
-        """
-        tar xvzf $extra_archive
-        tar xvzf $rsem_results_archive
-
-        tar cvzf isoforms_results.tar.gz *.isoforms.results
-        """
-    }
-
- }
-
- if (!params.rsem_results_isoforms_archive) { ch_rsem_results_isoforms_hbadeals = ch_rsem_isoforms_results }
- if ( params.rsem_results_isoforms_archive) { ch_rsem_results_isoforms_hbadeals = ch_rsem_results_isoforms_aggregated }
-
- if(!params.skip_hbadeals && !params.skip_rsem) {
-    process hbadeals {
-        tag "${contrast_id}"
-        label "hbadeals"
-        publishDir "${params.outdir}/hbadeals/${contrast_id}", mode: "${params.publish_dir_mode}"
-        echo true
-
-        input:
-            set val(contrast_id), file(metadata) from ch_hbadeals_metadata
-            each file("isoforms_results.tar.gz") from ch_rsem_results_isoforms_hbadeals
-
-        output:
-            file("*csv")
-            file("*txt")
-
-        script:
-        """
-        echo 'metadata file:' $metadata
-        ls -l
-        tar xzvf isoforms_results.tar.gz && rm isoforms_results.tar.gz
-
-        rsem2hbadeals.R \
-        --rsem_folder='.' \
-        --metadata=$metadata \
-        --rsem_file_suffix=$params.rsem_file_suffix \
-        --output=$contrast_id \
-        --isoform_level=$params.isoform_level \
-        --mcmc_iter=$params.mcmc_iter \
-        --mcmc_warmup=$params.mcmc_warmup \
-        --zeroes_threshold=$params.zeroes_threshold \
-        --n_cores=${task.cpus}  &> sterrout_${contrast_id}.txt
-        """
-    }
-  }
 
   /*
    * STEP 13 - stringtie FPKM
@@ -1678,6 +1612,73 @@ if (!params.skipAlignment) {
   rsem_logs = Channel.from(false)
 }
 
+/*
+ * Step aggregate *isoform.results for HBA-DEALS
+ */
+
+ if(!params.skip_hbadeals && !params.skip_rsem && params.rsem_results_isoforms_archive) {
+     process aggregateRSEM {
+        tag "${params.rsem_results_isoforms_archive}"
+        label "hbadeals"
+        echo true
+
+        input:
+            file(rsem_extra_archive) from ch_rsem_isoforms_results_archive
+            file(rsem_results_archive) from ch_rsem_isoforms_results
+
+        output:
+            file("isoforms_results.tar.gz") into ch_rsem_results_isoforms_aggregated
+
+        script:
+        """
+        tar xvzf $extra_archive
+        tar xvzf $rsem_results_archive
+
+        tar cvzf isoforms_results.tar.gz *.isoforms.results
+        """
+    }
+ }
+
+ if (!params.rsem_results_isoforms_archive) { ch_rsem_results_isoforms_hbadeals = ch_rsem_isoforms_results }
+ if ( params.rsem_results_isoforms_archive) { ch_rsem_results_isoforms_hbadeals = ch_rsem_results_isoforms_aggregated }
+
+/*
+ * Step Run HBA-DEALS
+ */
+ if(!params.skip_hbadeals && !params.skip_rsem) {
+    process hbadeals {
+        tag "${contrast_id}"
+        label "hbadeals"
+        publishDir "${params.outdir}/hbadeals/${contrast_id}", mode: "${params.publish_dir_mode}"
+        echo true
+
+        input:
+            set val(contrast_id), file(metadata) from ch_hbadeals_metadata
+            each file("isoforms_results.tar.gz") from ch_rsem_results_isoforms_hbadeals
+
+        output:
+            file("*csv")
+            file("*txt")
+
+        script:
+        """
+        echo 'metadata file:' $metadata
+        ls -l
+        tar xzvf isoforms_results.tar.gz && rm isoforms_results.tar.gz
+
+        rsem2hbadeals.R \
+        --rsem_folder='.' \
+        --metadata=$metadata \
+        --rsem_file_suffix=$params.rsem_file_suffix \
+        --output=$contrast_id \
+        --isoform_level=$params.isoform_level \
+        --mcmc_iter=$params.mcmc_iter \
+        --mcmc_warmup=$params.mcmc_warmup \
+        --zeroes_threshold=$params.zeroes_threshold \
+        --n_cores=${task.cpus}  &> sterrout_${contrast_id}.txt
+        """
+    }
+ }
 
 /*
  * STEP 15 - Transcriptome quantification with Salmon
@@ -1794,7 +1795,6 @@ if (params.pseudo_aligner == 'salmon') {
 } else {
     salmon_logs = Channel.empty()
 }
-
 
 /*
  * STEP 16 - MultiQC
@@ -2006,7 +2006,7 @@ workflow.onComplete {
         log.info "[${c_purple}nf-core/rnaseq${c_reset}] ${c_red} Pipeline completed with errors${c_reset}"
     }
 
-}
+}    
 
 // Check file extension
 def hasExtension(it, extension) {
@@ -2063,3 +2063,4 @@ public void download_img(def address) {
       new URL(address).withInputStream { from ->  out << from; }
   }
 }
+
