@@ -93,6 +93,17 @@ def helpMessage() {
       --skipEdgeR                   Skip edgeR MDS plot and heatmap
       --skipMultiQC                 Skip MultiQC
 
+    HBA-DEALS:
+      --skip_hbadeals               Skip running the hbadeals::hbadeals() function on RSEM isoform results
+      --hbadeals_metadata           Path to the two-column masterfile .csv defining the i) name and ii) path
+                                    to the metadata file of the contrasts for running hbadeals::hbadeals().
+      --mcmc_warmup                 Number of iterations. Corresponds to mcmc.warmup parameter of hbadeals::hbadeals()
+      --mcmc_iter                   Number of iterations. Corresponds to mcmc.iter parameter of hbadeals::hbadeals()
+      --zeroes_threshold            Fraction of the minority class (case, control) to use for filtering out trascripts with zero count.
+      --sample_colname              Column name in the metadata file that contains the SRR id, default: 'sample_id'
+      --status_colname              Column name in the metadata file with the control,case status information, default: 'status'
+      --isoform_level               Check ?hbadeals::hbadeals, default: TRUE
+
     Other options:
       --sampleLevel                 Used to turn off the edgeR MDS and heatmap. Set automatically when running on fewer than 3 samples
       --outdir                      The output directory where the results will be saved
@@ -1650,7 +1661,6 @@ if (!params.skipAlignment) {
         tag "${contrast_id}"
         label "hbadeals"
         publishDir "${params.outdir}/hbadeals/${contrast_id}", mode: "${params.publish_dir_mode}"
-        echo true
 
         input:
             set val(contrast_id), file(metadata) from ch_hbadeals_metadata
@@ -1671,10 +1681,13 @@ if (!params.skipAlignment) {
         --metadata=$metadata \
         --rsem_file_suffix=$params.rsem_file_suffix \
         --output=$contrast_id \
-        --isoform_level=$params.isoform_level \
-        --mcmc_iter=$params.mcmc_iter \
-        --mcmc_warmup=$params.mcmc_warmup \
-        --zeroes_threshold=$params.zeroes_threshold \
+        --isoform_level=$params.hbadeals_isoform_level \
+        --mcmc_iter=$params.hbadeals_mcmc_iter \
+        --mcmc_warmup=$params.hbadeals_mcmc_warmup \
+        --zeroes_threshold=$params.hbadeals_zeroes_threshold \
+        --sample_colname=$params.hbadeals_sample_colname \
+        --status_colname=$params.hbadeals_status_colname \
+        --isoform_level=$params.hbadeals_isoform_level \
         --n_cores=${task.cpus}  &> sterrout_${contrast_id}.txt
         """
     }
