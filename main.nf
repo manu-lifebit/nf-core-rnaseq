@@ -413,8 +413,8 @@ if (!params.skip_hbadeals) {
 /*
  *  Create channel for the HBA-DEALS optional additional archive with
  */
-if (params.rsem_results_isoforms_archive) { Channel.fromPath( params.rsem_results_isoforms_archive ).ifEmpty { exit 1, "Input file ${params.rsem_results_isoforms_archive} not found at this location "}
-if (params.rsem_results_isoforms_archive) { ch_rsem_isoforms_results_archive = Channel.fromPath( params.rsem_results_isoforms_archive).map {it -> "extra_rsem_isoform_results.tar.gz", it } }
+if (params.rsem_results_isoforms_archive) { Channel.fromPath( params.rsem_results_isoforms_archive ).ifEmpty { exit 1, "Input file ${params.rsem_results_isoforms_archive} not found at this location " } }
+if (params.rsem_results_isoforms_archive) { ch_rsem_isoforms_results_archive = Channel.fromPath( params.rsem_results_isoforms_archive) }
 
 // Header log info
 log.info nfcoreHeader()
@@ -1515,13 +1515,12 @@ if (!params.skipAlignment) {
         mv isoforms_results_dir/isoforms_results.tar.gz .
         """
     }
-    rsem_results_isoforms_hbadeals_view.view()
   } else {
       rsem_logs = Channel.from(false)
   }
 
 /*
- * Step HBA-DEALS
+ * Step aggregate *isoform.results for HBA-DEALS
  */
 
  if(!params.skip_hbadeals && !params.skip_rsem && params.rsem_results_isoforms_archive) {
@@ -1545,12 +1544,14 @@ if (!params.skipAlignment) {
         tar cvzf isoforms_results.tar.gz *.isoforms.results
         """
     }
-
  }
 
  if (!params.rsem_results_isoforms_archive) { ch_rsem_results_isoforms_hbadeals = ch_rsem_isoforms_results }
  if ( params.rsem_results_isoforms_archive) { ch_rsem_results_isoforms_hbadeals = ch_rsem_results_isoforms_aggregated }
 
+/*
+ * Step Run HBA-DEALS
+ */
  if(!params.skip_hbadeals && !params.skip_rsem) {
     process hbadeals {
         tag "${contrast_id}"
@@ -1582,6 +1583,68 @@ if (!params.skipAlignment) {
         --mcmc_warmup=$params.mcmc_warmup \
         --zeroes_threshold=$params.zeroes_threshold \
         --n_cores=${task.cpus}  &> sterrout_${contrast_id}.txt
+        """
+    }
+    
+    /*
+    * Prepare data for Ontologizer 
+    */
+    process getGeneSets {
+        tag "${contrast}"
+        label 'ontologizer'
+
+        input:
+        set  name(contrast), file(gene_set), file(universe) from ch_ontologizer_inputs
+        each file(go.obo) from obo_file
+        each file(goa_human.gaf) from go_annotation_file
+        each val(calculation) from ontologizer_calculation_type
+
+        output:
+        file "${ontologizer_output}" into ch_ontologiser_results
+
+        when: ('ontologiser' in tools || 'ontologizer' in tools )
+
+        script:
+        """
+        ontologizer \
+        -s $gene_set \
+        -p $universe \
+        -g $go.obo \
+        -a $goa_human.gaf \
+        -c $calculation \
+        -m Benjamini-Hochberg 
+        -n")
+        """
+    }
+
+    /*
+    * Perform Gene Ontology analysis with Ontologizer 
+    */
+
+    process ontologizer {
+        tag "${contrast}"
+        label 'ontologizer'
+
+        input:
+        set  name(contrast), file(gene_set), file(universe) from ch_ontologizer_inputs
+        each file(go.obo) from obo_file
+        each file(goa_human.gaf) from go_annotation_file
+
+        output:
+        file "${ontologizer_output}" into ch_ontologiser_results
+
+        when: ('ontologiser' in tools || 'ontologizer' in tools )
+
+        script:
+        """
+        ontologizer \
+        -s $gene_set \
+        -p $universe \
+        -g $go.obo \
+        -a $goa_human.gaf \
+        -c Term-For-Term \
+        -m Benjamini-Hochberg 
+        -n")
         """
     }
   }
