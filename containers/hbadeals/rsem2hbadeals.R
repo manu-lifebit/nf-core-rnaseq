@@ -193,10 +193,10 @@ cases_ids   <- metaData[[sample_colname]][metaData[[status_colname]] == 2]
 
 message('dim(countsData)[1] before transcript exclusion: ', dim(countsData)[1])
 
-countsData <- countsData[rowSums(countsData[, colnames(countsData) == control_ids ] > 0) > N_minority_class * zeroes_threshold, ]
+countsData <- countsData[rowSums(countsData[, colnames(countsData) %in% control_ids ] > 0) > N_minority_class * zeroes_threshold, ]
 message('dim(countsData)[1] after applying transcript exclusion based on control: ', dim(countsData)[1])
 
-countsData <- countsData[rowSums(countsData[, colnames(countsData) == cases_ids   ] > 0) > N_minority_class * zeroes_threshold, ]
+countsData <- countsData[rowSums(countsData[, colnames(countsData) %in% cases_ids   ] > 0) > N_minority_class * zeroes_threshold, ]
 message('dim(countsData)[1] after applying transcript exclusion based on cases: ', dim(countsData)[1])
 
 
