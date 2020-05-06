@@ -213,9 +213,17 @@ message('dim(countsData)[1] before gene exclusion based on number of isoforms ( 
 # message("\nOrdering 'countsData' columns according to 'metaData$sample_id' order ..")
 toKeepInOrder <- c( "gene_id", "transcript_id", as.vector(metaData$sample_id) )
 countsData    <- countsData[, toKeepInOrder]
+
 # message("Done!")
 write.table(countsData,
             file      = paste0("countsData_", output, ".csv"),
+            sep       = ',',
+            quote     = F,
+            col.names = T,
+            row.names = F)
+
+write.table(metaData,
+            file      = paste0("metaData_", output, ".csv"),
             sep       = ',',
             quote     = F,
             col.names = T,
