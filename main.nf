@@ -1642,7 +1642,7 @@ if (!params.skipAlignment) {
 
         script:
         """
-        tar xvzf $extra_archive
+        tar xvzf $rsem_extra_archive
         tar xvzf $rsem_results_archive
 
         tar cvzf isoforms_results.tar.gz *.isoforms.results
