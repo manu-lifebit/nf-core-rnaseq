@@ -417,8 +417,8 @@ if(params.accessionList) { accessionIDs = Channel.fromPath( params.accessionList
 
 if (!params.skip_hbadeals) {
     if( params.hbadeals_metadata)                  { Channel.fromPath( params.hbadeals_metadata ).ifEmpty { exit 1, "Input master file .csv of .csv metadata files not found at ${params.hbadeals_metadata}. Is the file path correct?" } }
-    if(!params.hbadeals_metadata.endsWith(".csv")) { exit 1, "Input master file defined with --hbadeals_metadata must have a .csv suffix. Please rename your file accordingly and retry." }
-    if(!params.skip_hbadeals)                      { ch_hbadeals_metadata = Channel.fromPath( params.hbadeals_metadata ).splitCsv(sep: ',' , skip: 1).map { unique_id, path -> tuple("contrast_"+unique_id, file(path)) } }
+    if( params.hbadeals_metadata && !params.hbadeals_metadata.endsWith(".csv")) { exit 1, "Input master file defined with --hbadeals_metadata must have a .csv suffix. Please rename your file accordingly and retry." }
+    if( params.hbadeals_metadata &&  params.hbadeals_metadata.endsWith(".csv")) { ch_hbadeals_metadata = Channel.fromPath( params.hbadeals_metadata ).splitCsv(sep: ',' , skip: 1).map { unique_id, path -> tuple("contrast_"+unique_id, file(path)) } }
 }
 
 /*
