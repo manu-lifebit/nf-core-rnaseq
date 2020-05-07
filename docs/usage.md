@@ -186,7 +186,7 @@ SRR3623945
 SRR3623928
 ```
 
-#### **NOTES** 
+#### **NOTES**
 - The option `--accession_list` is alternative to `--input` and they cannot be used in conjuction.
 - The accession list must be homogeneous, with SRRs of either only single-end or only paired-end reads.
 
