@@ -10,7 +10,7 @@
 [![install with bioconda](https://img.shields.io/badge/install%20with-bioconda-brightgreen.svg)](http://bioconda.github.io/)
 [![Docker](https://img.shields.io/docker/automated/nfcore/rnaseq.svg)](https://hub.docker.com/r/nfcore/rnaseq/)
 
->  <img src="https://avatars2.githubusercontent.com/u/19977120?s=200&v=4" width="40"/> **NOTE**: <br>
+><img src="https://avatars2.githubusercontent.com/u/19977120?s=200&v=4" width="40"/> **NOTE**: <br>
 This is a fork of the [nf-core/rnaseq](https://github.com/nf-core/rnaseq) pipeline modified for use from the researchers of The Jackson Laboratory. For the stable, peer-reviewed version of this pipeline please visit [nf-core/rnaseq](https://github.com/nf-core/rnaseq).
 
 ## Introduction
