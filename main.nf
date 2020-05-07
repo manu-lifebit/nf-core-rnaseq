@@ -128,6 +128,14 @@ if (params.help) {
 }
 
 /*
+ * SET UP SELECTED TOOLS
+ */
+
+toolList = defineToolList()
+tools = params.tools ? params.tools.split(',').collect{it.trim().toLowerCase()} : []
+if (!checkParameterList(tools, toolList)) exit 1, 'Unknown tool(s), see --help for more information'
+
+/*
  * SET UP CONFIGURATION VARIABLES
  */
 
@@ -415,10 +423,10 @@ if(params.accessionList) { accessionIDs = Channel.fromPath( params.accessionList
  *  Create channel for the HBA-DEALS metadata contrasts
  */
 
-if (!params.skip_hbadeals) {
+if ( 'hbadeals' in tools ) {
     if( params.hbadeals_metadata)                  { Channel.fromPath( params.hbadeals_metadata ).ifEmpty { exit 1, "Input master file .csv of .csv metadata files not found at ${params.hbadeals_metadata}. Is the file path correct?" } }
-    if(!params.hbadeals_metadata.endsWith(".csv")) { exit 1, "Input master file defined with --hbadeals_metadata must have a .csv suffix. Please rename your file accordingly and retry." }
-    if(!params.skip_hbadeals)                      { ch_hbadeals_metadata = Channel.fromPath( params.hbadeals_metadata ).splitCsv(sep: ',' , skip: 1).map { unique_id, path -> tuple("contrast_"+unique_id, file(path)) } }
+    if( params.hbadeals_metadata && !params.hbadeals_metadata.endsWith(".csv")) { exit 1, "Input master file defined with --hbadeals_metadata must have a .csv suffix. Please rename your file accordingly and retry." }
+    if( params.hbadeals_metadata &&  params.hbadeals_metadata.endsWith(".csv")) { ch_hbadeals_metadata = Channel.fromPath( params.hbadeals_metadata ).splitCsv(sep: ',' , skip: 1).map { unique_id, path -> tuple("contrast_"+unique_id, file(path)) } }
 }
 
 /*
@@ -1526,10 +1534,82 @@ if (!params.skipAlignment) {
         mv isoforms_results_dir/isoforms_results.tar.gz .
         """
     }
+
+
+/*
+ * Step aggregate *isoform.results for HBA-DEALS
+ */
+    if (params.rsem_results_isoforms_archive)  {
+
+     process aggregateRSEM {
+        tag "${params.rsem_results_isoforms_archive}"
+        label "hbadeals"
+        echo true
+
+        input:
+            file(rsem_extra_archive) from ch_rsem_isoforms_results_archive
+            file(rsem_results_archive) from ch_rsem_isoforms_results
+
+        output:
+            file("isoforms_results.tar.gz") into ch_rsem_results_isoforms_aggregated
+
+        when: 'hbadeals' in tools
+
+        script:
+        """
+        tar xvzf $rsem_extra_archive
+        tar xvzf $rsem_results_archive
+
+        tar cvzf isoforms_results.tar.gz *.isoforms.results
+        """
+    }
+    ch_rsem_results_isoforms_hbadeals = ch_rsem_results_isoforms_aggregated
+}
+
+/*
+ * Step Run HBA-DEALS
+ */
+
+    if ( 'hbadeals' in tools ) {
+        if (!params.rsem_results_isoforms_archive) { ch_rsem_results_isoforms_hbadeals = ch_rsem_isoforms_results }
+        process hbadeals {
+            tag "${contrast_id}"
+            label "hbadeals"
+            publishDir "${params.outdir}/hbadeals/${contrast_id}", mode: "${params.publish_dir_mode}"
+
+            input:
+                set val(contrast_id), file(metadata) from ch_hbadeals_metadata
+                each file("isoforms_results.tar.gz") from ch_rsem_results_isoforms_hbadeals
+
+            output:
+                file("*csv")
+                file("*txt")
+
+            script:
+            """
+            echo 'metadata file:' $metadata
+            ls -l
+            tar xzvf isoforms_results.tar.gz && rm isoforms_results.tar.gz
+
+            rsem2hbadeals.R \
+            --rsem_folder='.' \
+            --metadata=$metadata \
+            --rsem_file_suffix=$params.rsem_file_suffix \
+            --output=$contrast_id \
+            --isoform_level=$params.hbadeals_isoform_level \
+            --mcmc_iter=$params.hbadeals_mcmc_iter \
+            --mcmc_warmup=$params.hbadeals_mcmc_warmup \
+            --zeroes_threshold=$params.hbadeals_zeroes_threshold \
+            --sample_colname=$params.hbadeals_sample_colname \
+            --status_colname=$params.hbadeals_status_colname \
+            --isoform_level=$params.hbadeals_isoform_level \
+            --n_cores=10  &> sterrout_${contrast_id}.txt
+            """
+        }
+    }
   } else {
       rsem_logs = Channel.from(false)
   }
-
 
   /*
    * STEP 13 - stringtie FPKM
@@ -1622,76 +1702,6 @@ if (!params.skipAlignment) {
   featureCounts_biotype = Channel.from(false)
   rsem_logs = Channel.from(false)
 }
-
-/*
- * Step aggregate *isoform.results for HBA-DEALS
- */
-
- if(!params.skip_hbadeals && !params.skip_rsem && params.rsem_results_isoforms_archive) {
-     process aggregateRSEM {
-        tag "${params.rsem_results_isoforms_archive}"
-        label "hbadeals"
-        echo true
-
-        input:
-            file(rsem_extra_archive) from ch_rsem_isoforms_results_archive
-            file(rsem_results_archive) from ch_rsem_isoforms_results
-
-        output:
-            file("isoforms_results.tar.gz") into ch_rsem_results_isoforms_aggregated
-
-        script:
-        """
-        tar xvzf $rsem_extra_archive
-        tar xvzf $rsem_results_archive
-
-        tar cvzf isoforms_results.tar.gz *.isoforms.results
-        """
-    }
- }
-
- if (!params.rsem_results_isoforms_archive) { ch_rsem_results_isoforms_hbadeals = ch_rsem_isoforms_results }
- if ( params.rsem_results_isoforms_archive) { ch_rsem_results_isoforms_hbadeals = ch_rsem_results_isoforms_aggregated }
-
-/*
- * Step Run HBA-DEALS
- */
- if(!params.skip_hbadeals && !params.skip_rsem) {
-    process hbadeals {
-        tag "${contrast_id}"
-        label "hbadeals"
-        publishDir "${params.outdir}/hbadeals/${contrast_id}", mode: "${params.publish_dir_mode}"
-
-        input:
-            set val(contrast_id), file(metadata) from ch_hbadeals_metadata
-            each file("isoforms_results.tar.gz") from ch_rsem_results_isoforms_hbadeals
-
-        output:
-            file("*csv")
-            file("*txt")
-
-        script:
-        """
-        echo 'metadata file:' $metadata
-        ls -l
-        tar xzvf isoforms_results.tar.gz && rm isoforms_results.tar.gz
-
-        rsem2hbadeals.R \
-        --rsem_folder='.' \
-        --metadata=$metadata \
-        --rsem_file_suffix=$params.rsem_file_suffix \
-        --output=$contrast_id \
-        --isoform_level=$params.hbadeals_isoform_level \
-        --mcmc_iter=$params.hbadeals_mcmc_iter \
-        --mcmc_warmup=$params.hbadeals_mcmc_warmup \
-        --zeroes_threshold=$params.hbadeals_zeroes_threshold \
-        --sample_colname=$params.hbadeals_sample_colname \
-        --status_colname=$params.hbadeals_status_colname \
-        --isoform_level=$params.hbadeals_isoform_level \
-        --n_cores=10  &> sterrout_${contrast_id}.txt
-        """
-    }
- }
 
 /*
  * STEP 15 - Transcriptome quantification with Salmon
@@ -2077,3 +2087,19 @@ public void download_img(def address) {
   }
 }
 
+/*
+ * CODE LOAN FROM SAREK LOGIC
+ */
+
+// Define list of available tools
+def defineToolList() {
+    return [
+        'hbadeals',
+        'rsem'
+    ]
+}
+
+// Compare each parameter with a list of parameters
+def checkParameterList(list, realList) {
+    return list.every{ checkParameterExistence(it, realList) }
+}
