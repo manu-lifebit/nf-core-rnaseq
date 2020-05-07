@@ -10,7 +10,7 @@ jobs:
       matrix:
         nxf_ver: ['19.10.0', '']
         aligner: ["--aligner 'hisat2'", "--aligner 'star'", "--pseudo_aligner 'salmon'"]
-        options: ['--skipQC', '--remove_rRNA', '--saveUnaligned', '--skipTrimming', '--star_index false']
+        options: ['--skipQC', '--remove_rRNA', '--saveUnaligned', '--skipTrimming', '--star_index false', '--skip_hbadeals']
     steps:
       - uses: actions/checkout@v2
       - name: Install Nextflow
@@ -20,8 +20,8 @@ jobs:
           sudo mv nextflow /usr/local/bin/
       - name: Pull docker image
         run: |
-          docker pull lifebitai/nfcore-atacseq:dev
-          docker tag nfcore/rnaseq:dev lifebitai/nfcore-atacseq:1.1.0
+          docker pull nfcore/rnaseq:dev
+          docker tag nfcore/rnaseq:dev nfcore/rnaseq:dev
       - name: Basic workflow tests
         run: |
           nextflow run ${GITHUB_WORKSPACE} -profile test,docker ${{ matrix.aligner }} ${{ matrix.options }}
