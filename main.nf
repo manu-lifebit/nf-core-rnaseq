@@ -29,8 +29,10 @@ def helpMessage() {
                                     Available: conda, docker, singularity, test, awsbatch, <institute> and more
 
     Generic:
-      --single_end                   Specifies that the input is single-end reads
-
+      --single_end                  Specifies that the input is single-end reads
+      --tools                       Specify additional tools to use
+                                    Available: hbadeals
+                                    Default: None
     References:                     If not specified in the configuration file or you wish to overwrite any of the references.
       --genome                      Name of iGenomes reference
       --star_index                  Path to STAR index
