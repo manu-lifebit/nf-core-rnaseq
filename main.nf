@@ -154,10 +154,10 @@ params.gff = params.genome ? params.genomes[ params.genome ].gff ?: false : fals
 params.bed12 = params.genome ? params.genomes[ params.genome ].bed12 ?: false : false
 params.hisat2_index = params.genome ? params.genomes[ params.genome ].hisat2 ?: false : false
 
-ch_mdsplot_header = Channel.fromPath("$params.assetsDir/assets/mdsplot_header.txt", checkIfExists: true)
-ch_heatmap_header = Channel.fromPath("$params.assetsDir/assets/heatmap_header.txt", checkIfExists: true)
-ch_biotypes_header = Channel.fromPath("$params.assetsDir/assets/biotypes_header.txt", checkIfExists: true)
-Channel.fromPath("$params.assetsDir/assets/where_are_my_files.txt", checkIfExists: true)
+ch_mdsplot_header = Channel.fromPath("$params.base_dir/assets/mdsplot_header.txt", checkIfExists: true)
+ch_heatmap_header = Channel.fromPath("$params.base_dir/assets/heatmap_header.txt", checkIfExists: true)
+ch_biotypes_header = Channel.fromPath("$params.base_dir/assets/biotypes_header.txt", checkIfExists: true)
+Channel.fromPath("$params.base_dir/assets/where_are_my_files.txt", checkIfExists: true)
        .into{ch_where_trim_galore; ch_where_star; ch_where_hisat2; ch_where_hisat2_sort}
 
 // Define regular variables so that they can be overwritten
@@ -383,9 +383,9 @@ if (workflow.profile == 'awsbatch') {
 }
 
 // Stage config files
-ch_multiqc_config = file("$params.assetsDir/assets/multiqc_config.yaml", checkIfExists: true)
+ch_multiqc_config = file("$params.base_dir/assets/multiqc_config.yaml", checkIfExists: true)
 ch_multiqc_custom_config = params.multiqc_config ? Channel.fromPath(params.multiqc_config, checkIfExists: true) : Channel.empty()
-ch_output_docs = file("$params.assetsDir/docs/output.md", checkIfExists: true)
+ch_output_docs = file("$params.base_dir/docs/output.md", checkIfExists: true)
 
 /*
  * Create a channel for input read files, from path or by retrieving from SRA
@@ -1963,7 +1963,7 @@ workflow.onComplete {
     def email_html = html_template.toString()
 
     // Render the sendmail template
-    def smail_fields = [ email: email_address, subject: subject, email_txt: email_txt, email_html: email_html, assetsDir: "$params.assetsDir", mqcFile: mqc_report, mqcMaxSize: params.max_multiqc_email_size.toBytes() ]
+    def smail_fields = [ email: email_address, subject: subject, email_txt: email_txt, email_html: email_html, base_dir: "$params.base_dir", mqcFile: mqc_report, mqcMaxSize: params.max_multiqc_email_size.toBytes() ]
     def sf = new File("sendmail_template.txt")
     def sendmail_template = engine.createTemplate(sf).make(smail_fields)
     def sendmail_html = sendmail_template.toString()
