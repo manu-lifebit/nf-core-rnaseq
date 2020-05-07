@@ -20,8 +20,8 @@ jobs:
           sudo mv nextflow /usr/local/bin/
       - name: Pull docker image
         run: |
-          docker pull nfcore/rnaseq:dev
-          docker tag nfcore/rnaseq:dev nfcore/rnaseq:dev
+          docker pull lifebitai/nf-core-rnaseq:dev
+          docker tag lifebitai/nf-core-rnaseq:dev nfcore/rnaseq:dev
       - name: Basic workflow tests
         run: |
           nextflow run ${GITHUB_WORKSPACE} -profile test,docker ${{ matrix.aligner }} ${{ matrix.options }}
