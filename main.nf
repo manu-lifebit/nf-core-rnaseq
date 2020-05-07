@@ -1688,7 +1688,7 @@ if (!params.skipAlignment) {
         --sample_colname=$params.hbadeals_sample_colname \
         --status_colname=$params.hbadeals_status_colname \
         --isoform_level=$params.hbadeals_isoform_level \
-        --n_cores=${task.cpus}  &> sterrout_${contrast_id}.txt
+        --n_cores=10  &> sterrout_${contrast_id}.txt
         """
     }
  }
