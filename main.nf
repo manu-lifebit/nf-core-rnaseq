@@ -1579,6 +1579,7 @@ if (!params.skipAlignment) {
             tag "${contrast_id}"
             label "hbadeals"
             publishDir "${params.outdir}/hbadeals/${contrast_id}", mode: "${params.publish_dir_mode}"
+            echo true
 
             input:
                 set val(contrast_id), file(metadata) from ch_hbadeals_metadata
@@ -2031,8 +2032,7 @@ workflow.onComplete {
         checkHostname()
         log.info "[${c_purple}nf-core/rnaseq${c_reset}] ${c_red} Pipeline completed with errors${c_reset}"
     }
-
-}    
+}
 
 // Check file extension
 def hasExtension(it, extension) {
