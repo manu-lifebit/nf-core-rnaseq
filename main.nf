@@ -423,7 +423,7 @@ if(params.accessionList) { accessionIDs = Channel.fromPath( params.accessionList
  *  Create channel for the HBA-DEALS metadata contrasts
  */
 
-if (!params.skip_hbadeals) {
+if ( 'hbadeals' in tools ) {
     if( params.hbadeals_metadata)                  { Channel.fromPath( params.hbadeals_metadata ).ifEmpty { exit 1, "Input master file .csv of .csv metadata files not found at ${params.hbadeals_metadata}. Is the file path correct?" } }
     if( params.hbadeals_metadata && !params.hbadeals_metadata.endsWith(".csv")) { exit 1, "Input master file defined with --hbadeals_metadata must have a .csv suffix. Please rename your file accordingly and retry." }
     if( params.hbadeals_metadata &&  params.hbadeals_metadata.endsWith(".csv")) { ch_hbadeals_metadata = Channel.fromPath( params.hbadeals_metadata ).splitCsv(sep: ',' , skip: 1).map { unique_id, path -> tuple("contrast_"+unique_id, file(path)) } }
@@ -1566,49 +1566,47 @@ if (!params.skipAlignment) {
     ch_rsem_results_isoforms_hbadeals = ch_rsem_results_isoforms_aggregated
 }
 
-
 /*
  * Step Run HBA-DEALS
  */
-    if (!params.rsem_results_isoforms_archive) { ch_rsem_results_isoforms_hbadeals = ch_rsem_isoforms_results }
 
-    process hbadeals {
-        tag "${contrast_id}"
-        label "hbadeals"
-        publishDir "${params.outdir}/hbadeals/${contrast_id}", mode: "${params.publish_dir_mode}"
+    if ( 'hbadeals' in tools ) {
+        if (!params.rsem_results_isoforms_archive) { ch_rsem_results_isoforms_hbadeals = ch_rsem_isoforms_results }
+        process hbadeals {
+            tag "${contrast_id}"
+            label "hbadeals"
+            publishDir "${params.outdir}/hbadeals/${contrast_id}", mode: "${params.publish_dir_mode}"
 
-        input:
-            set val(contrast_id), file(metadata) from ch_hbadeals_metadata
-            each file("isoforms_results.tar.gz") from ch_rsem_results_isoforms_hbadeals
+            input:
+                set val(contrast_id), file(metadata) from ch_hbadeals_metadata
+                each file("isoforms_results.tar.gz") from ch_rsem_results_isoforms_hbadeals
 
-        output:
-            file("*csv")
-            file("*txt")
+            output:
+                file("*csv")
+                file("*txt")
 
-        when: 'hbadeals' in tools
+            script:
+            """
+            echo 'metadata file:' $metadata
+            ls -l
+            tar xzvf isoforms_results.tar.gz && rm isoforms_results.tar.gz
 
-        script:
-        """
-        echo 'metadata file:' $metadata
-        ls -l
-        tar xzvf isoforms_results.tar.gz && rm isoforms_results.tar.gz
-
-        rsem2hbadeals.R \
-        --rsem_folder='.' \
-        --metadata=$metadata \
-        --rsem_file_suffix=$params.rsem_file_suffix \
-        --output=$contrast_id \
-        --isoform_level=$params.hbadeals_isoform_level \
-        --mcmc_iter=$params.hbadeals_mcmc_iter \
-        --mcmc_warmup=$params.hbadeals_mcmc_warmup \
-        --zeroes_threshold=$params.hbadeals_zeroes_threshold \
-        --sample_colname=$params.hbadeals_sample_colname \
-        --status_colname=$params.hbadeals_status_colname \
-        --isoform_level=$params.hbadeals_isoform_level \
-        --n_cores=10  &> sterrout_${contrast_id}.txt
-        """
+            rsem2hbadeals.R \
+            --rsem_folder='.' \
+            --metadata=$metadata \
+            --rsem_file_suffix=$params.rsem_file_suffix \
+            --output=$contrast_id \
+            --isoform_level=$params.hbadeals_isoform_level \
+            --mcmc_iter=$params.hbadeals_mcmc_iter \
+            --mcmc_warmup=$params.hbadeals_mcmc_warmup \
+            --zeroes_threshold=$params.hbadeals_zeroes_threshold \
+            --sample_colname=$params.hbadeals_sample_colname \
+            --status_colname=$params.hbadeals_status_colname \
+            --isoform_level=$params.hbadeals_isoform_level \
+            --n_cores=10  &> sterrout_${contrast_id}.txt
+            """
+        }
     }
-
   } else {
       rsem_logs = Channel.from(false)
   }
