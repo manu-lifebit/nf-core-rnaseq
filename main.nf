@@ -1544,7 +1544,6 @@ if (!params.skipAlignment) {
  * Step aggregate *isoform.results for HBA-DEALS
  */
     if (params.rsem_results_isoforms_archive)  {
-
      process aggregateRSEM {
         tag "${params.rsem_results_isoforms_archive}"
         label "hbadeals"
