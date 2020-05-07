@@ -96,7 +96,6 @@ def helpMessage() {
       --skipMultiQC                 Skip MultiQC
 
     HBA-DEALS:
-      --skip_hbadeals               Skip running the hbadeals::hbadeals() function on RSEM isoform results
       --hbadeals_metadata           Path to the two-column masterfile .csv defining the i) name and ii) path
                                     to the metadata file of the contrasts for running hbadeals::hbadeals().
       --hbadeals_mcmc_warmup        Number of iterations. Corresponds to mcmc.warmup parameter of hbadeals::hbadeals()
