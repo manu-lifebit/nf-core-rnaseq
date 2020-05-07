@@ -421,7 +421,7 @@ raw_reads_inspect.view()
 
 // Input list .csv file of many .csv files when hbadeals is not skipped
 if(params.accession_list) { Channel.fromPath( params.accession_list ).ifEmpty { exit 1, "Input accession list not found at ${params.accession_list}. Is the file path correct?" } }
-if(params.accession_list) { accessionIDs = Channel.fromPath( params.accession_list ).splitText().unique().map{ it -> it.trim() } }
+if(params.accession_list) { ch_srr_ids = Channel.fromPath( params.accession_list ).splitText().unique().map{ it -> it.trim() } }
 
 /*
  *  Create channel for the HBA-DEALS metadata contrasts
@@ -909,7 +909,7 @@ if (params.accession_list) {
         tag "${accession}"
 
         input:
-        val(accession) from accessionIDs
+        val(accession) from ch_srr_ids
 
         output:
         set val(accession), file("*.fastq.gz") into (raw_reads_inspect, raw_reads_fastqc, raw_reads_trimgalore)
