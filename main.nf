@@ -1648,15 +1648,15 @@ if (!params.skipAlignment) {
         tar cvzf isoforms_results.tar.gz *.isoforms.results
         """
     }
+     if ( params.rsem_results_isoforms_archive) { ch_rsem_results_isoforms_hbadeals = ch_rsem_results_isoforms_aggregated }
  }
-
- if (!params.rsem_results_isoforms_archive) { ch_rsem_results_isoforms_hbadeals = ch_rsem_isoforms_results }
- if ( params.rsem_results_isoforms_archive) { ch_rsem_results_isoforms_hbadeals = ch_rsem_results_isoforms_aggregated }
 
 /*
  * Step Run HBA-DEALS
  */
  if(!params.skip_hbadeals && !params.skip_rsem) {
+    if (!params.rsem_results_isoforms_archive) { ch_rsem_results_isoforms_hbadeals = ch_rsem_isoforms_results }
+
     process hbadeals {
         tag "${contrast_id}"
         label "hbadeals"
