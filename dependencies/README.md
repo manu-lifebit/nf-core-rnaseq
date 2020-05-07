@@ -22,9 +22,8 @@ conda install java-jdk bash_kernel -y
 
 ## 3. Follow the Ontologizer instructions to get the .jar file
 
-Read instructions from Ontologizer docs here : http://ontologizer.de/commandline/
-
-Download the ontologizer.jar file fro [here](http://ontologizer.de/cmdline/Ontologizer.jar) by copying link.
+Read instructions from Ontologizer docs [here](http://ontologizer.de).
+Download the ontologizer.jar file from [here](http://ontologizer.de/cmdline/Ontologizer.jar) by copying link.
 
 ```bash
 wget <ontologizer-link>
