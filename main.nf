@@ -128,6 +128,14 @@ if (params.help) {
 }
 
 /*
+ * SET UP SELECTED TOOLS
+ */
+
+toolList = defineToolList()
+tools = params.tools ? params.tools.split(',').collect{it.trim().toLowerCase()} : []
+if (!checkParameterList(tools, toolList)) exit 1, 'Unknown tool(s), see --help for more information'
+
+/*
  * SET UP CONFIGURATION VARIABLES
  */
 
@@ -1640,6 +1648,8 @@ if (!params.skipAlignment) {
         output:
             file("isoforms_results.tar.gz") into ch_rsem_results_isoforms_aggregated
 
+        when: 'hbadeals' in tools
+
         script:
         """
         tar xvzf $rsem_extra_archive
@@ -1669,6 +1679,8 @@ if (!params.skipAlignment) {
         output:
             file("*csv")
             file("*txt")
+
+        when: 'hbadeals' in tools
 
         script:
         """
@@ -2077,3 +2089,19 @@ public void download_img(def address) {
   }
 }
 
+/*
+ * CODE LOAN FROM SAREK LOGIC
+ */
+
+// Define list of available tools
+def defineToolList() {
+    return [
+        'hbadeals',
+        'rsem'
+    ]
+}
+
+// Compare each parameter with a list of parameters
+def checkParameterList(list, realList) {
+    return list.every{ checkParameterExistence(it, realList) }
+}
