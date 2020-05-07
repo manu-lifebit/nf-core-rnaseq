@@ -20,7 +20,6 @@ conda activate base
 conda install java-jdk bash_kernel -y
 ```
 
-
 ## 3. Follow the Ontologizer instructions to get the .jar file
 
 Read instructions from Ontologizer docs here : http://ontologizer.de/commandline/
