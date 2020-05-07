@@ -21,7 +21,7 @@ def helpMessage() {
 
     Mandatory arguments:
       --reads [file]                Path to input data (must be surrounded with quotes)
-      --accessionList [file]        Path to input file with accession list to fetch from SRA
+      --accession_list [file]       Path to input file with accession list to fetch from SRA
                                     Alternative to --reads. Define SRA samples to be retrieved.
                                     NOTE: If provided, it will override the --reads parameter.
 
@@ -391,7 +391,7 @@ ch_output_docs = file("$params.assetsDir/docs/output.md", checkIfExists: true)
  * Create a channel for input read files, from path or by retrieving from SRA
  */
 
-if(!params.accessionList) {
+if(!params.accession_list) {
     if (params.readPaths && params.single_end) {
         Channel
             .from(params.readPaths)
@@ -420,8 +420,8 @@ raw_reads_inspect.view()
  */
 
 // Input list .csv file of many .csv files when hbadeals is not skipped
-if(params.accessionList) { Channel.fromPath( params.accessionList ).ifEmpty { exit 1, "Input accession list not found at ${params.accessionList}. Is the file path correct?" } }
-if(params.accessionList) { accessionIDs = Channel.fromPath( params.accessionList ).splitText().unique().map{ it -> it.trim() } }
+if(params.accession_list) { Channel.fromPath( params.accession_list ).ifEmpty { exit 1, "Input accession list not found at ${params.accession_list}. Is the file path correct?" } }
+if(params.accession_list) { accessionIDs = Channel.fromPath( params.accession_list ).splitText().unique().map{ it -> it.trim() } }
 
 /*
  *  Create channel for the HBA-DEALS metadata contrasts
@@ -444,9 +444,9 @@ log.info nfcoreHeader()
 def summary = [:]
 if (workflow.revision) summary['Pipeline Release'] = workflow.revision
 summary['Run Name'] = custom_runName ?: workflow.runName
-if (!params.accessionList) summary['Reads'] = params.reads
+if (!params.accession_list) summary['Reads'] = params.reads
 summary['Data Type'] = params.single_end ? 'Single-End' : 'Paired-End'
-if (params.accessionList) summary['SRA accession'] = params.accessionList
+if (params.accession_list) summary['SRA accession'] = params.accession_list
 if (params.hbadeals_metadata) summary['HBA-DEALS metadata'] = params.hbadeals_metadata
 if (params.genome) summary['Genome'] = params.genome
 if (params.pico) summary['Library Prep'] = "SMARTer Stranded Total RNA-Seq Kit - Pico Input"
@@ -904,7 +904,7 @@ if (params.pseudo_aligner == 'salmon' && !params.salmon_index) {
 /*
  * STEP  - Get accession samples from SRA
 */
-if (params.accessionList) {
+if (params.accession_list) {
     process getAccession {
         tag "${accession}"
 
