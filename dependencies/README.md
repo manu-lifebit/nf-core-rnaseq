@@ -30,7 +30,7 @@ Download the ontologizer.jar file fro [here](http://ontologizer.de/cmdline/Ontol
 wget <ontologizer-link>
 ```
 
-This will now be accessible only from the currend directory. 
+This will now be accessible only from the currend directory.
 
 ## 4. Test that you have Ontologizer installed by typing the --help
 
