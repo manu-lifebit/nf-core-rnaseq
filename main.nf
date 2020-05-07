@@ -286,6 +286,9 @@ if (params.pseudo_aligner == 'salmon') {
 }
 
 skip_rsem = params.skip_rsem
+if ( 'hbadeals' in tools && params.skip_rsem) {
+    println "HBA-DEALS only works with RSEM output. Disabling HBA-DEALS."
+}
 if (!params.skipAlignment && !params.skip_rsem && params.aligner != "star") {
     skip_rsem = true
     println "RSEM only works with STAR. Disabling RSEM."
