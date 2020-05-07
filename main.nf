@@ -97,12 +97,12 @@ def helpMessage() {
       --skip_hbadeals               Skip running the hbadeals::hbadeals() function on RSEM isoform results
       --hbadeals_metadata           Path to the two-column masterfile .csv defining the i) name and ii) path
                                     to the metadata file of the contrasts for running hbadeals::hbadeals().
-      --mcmc_warmup                 Number of iterations. Corresponds to mcmc.warmup parameter of hbadeals::hbadeals()
-      --mcmc_iter                   Number of iterations. Corresponds to mcmc.iter parameter of hbadeals::hbadeals()
-      --zeroes_threshold            Fraction of the minority class (case, control) to use for filtering out trascripts with zero count.
-      --sample_colname              Column name in the metadata file that contains the SRR id, default: 'sample_id'
-      --status_colname              Column name in the metadata file with the control,case status information, default: 'status'
-      --isoform_level               Check ?hbadeals::hbadeals, default: TRUE
+      --hbadeals_mcmc_warmup        Number of iterations. Corresponds to mcmc.warmup parameter of hbadeals::hbadeals()
+      --hbadeals_mcmc_iter          Number of iterations. Corresponds to mcmc.iter parameter of hbadeals::hbadeals()
+      --hbadeals_zeroes_threshold   Fraction of the minority class (case, control) to use for filtering out trascripts with zero count.
+      --hbadeals_sample_colname     Column name in the metadata file that contains the SRR id, default: 'sample_id'
+      --hbadeals_status_colname     Column name in the metadata file with the control,case status information, default: 'status'
+      --hbadeals_isoform_level      Check ?hbadeals::hbadeals, default: TRUE
 
     Other options:
       --sampleLevel                 Used to turn off the edgeR MDS and heatmap. Set automatically when running on fewer than 3 samples
