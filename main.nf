@@ -2102,7 +2102,17 @@ def defineToolList() {
     ]
 }
 
+// Check parameter existence
+def checkParameterExistence(it, list) {
+    if (!list.contains(it)) {
+        log.warn "Unknown parameter: ${it}"
+        return false
+    }
+    return true
+}
+
 // Compare each parameter with a list of parameters
 def checkParameterList(list, realList) {
     return list.every{ checkParameterExistence(it, realList) }
 }
+
