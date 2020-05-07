@@ -16,12 +16,12 @@ jobs:
       - name: Install Nextflow
         run: |
           export NXF_VER=${{ matrix.nxf_ver }}
-          wget -qO- get.nextflow.io | bash
+          wget -qO- https://get.nextflow.io | bash
           sudo mv nextflow /usr/local/bin/
       - name: Pull docker image
         run: |
-          docker pull nfcore/rnaseq:dev
-          docker tag nfcore/rnaseq:dev nfcore/rnaseq:dev
+          docker pull lifebitai/nfcore-atacseq:dev
+          docker tag nfcore/rnaseq:dev lifebitai/nfcore-atacseq:1.1.0
       - name: Basic workflow tests
         run: |
           nextflow run ${GITHUB_WORKSPACE} -profile test,docker ${{ matrix.aligner }} ${{ matrix.options }}
