@@ -1,0 +1,348 @@
+<!-- #region -->
+---
+**NOTE**
+
+You can convert this document to an .R or .Rmd file if you prefer by using the python library [`jupytext`](https://github.com/mwouts/jupytext).
+To do so, type the following command:
+
+
+```bash
+jupytext --to Rmd create_hbadeals_metadata.ipynb #or
+jupytext --to R   create_hbadeals_metadata.ipynb
+```
+You should see something like the following in your console after typing the above command:
+
+```
+[jupytext] Reading create_hbadeals_metadata.ipynb
+[jupytext] Writing create_hbadeals_metadata.R
+```
+
+The above tells you that the `.R` version of the `.ipynb` notebook has been created. 
+
+---
+<!-- #endregion -->
+
+<!-- #region -->
+# Creating the required input files for running [TheJacksonLaboratory/coronavirus-nf](https://github.com/TheJacksonLaboratory/coronavirus-nf/blob/master/main.nf#L1645-L1673)
+
+
+The helper script was created to create the required metadata files for the parameters:
+
+
+```bash
+--accession_list
+--hbadeals_metadata
+```
+
+```console
+Mandatory arguments:
+      --accession_list [file]        Path to input file with accession list to fetch from SRA.
+                                    The file should be a one column list with no header.
+                                    
+      --hbadeals_metadata [file]    Path to input master file that contains the metadata for the contrasts.
+                                    The file should be a two column .csv file with a header 
+                                    (eg colnames: "contrast", "metadata_file").
+                                    
+                                    The 1st column must have a unique id that describes the cohort.
+                                    The 2nd column must point to the path of the cohort metadata file.
+                                    
+                                    The metadata file must have the following information:
+                                    - SRRxx id
+                                    - status
+                                    This will be used as input for the rsem2hbadeals.R script.
+                                    See rsem2hbadeals.R --help for specifications of this files.
+                                    
+```
+<!-- #endregion -->
+
+<!-- #region -->
+# Loading libraries
+
+To install the following libraries if you are in a JupyterLab Notebook Session, open a terminal from `File > New > Terminal` and install via conda by typing the following command:
+
+
+```bash
+conda install r-dplyr r-rlist r-snakecase -y
+```
+<!-- #endregion -->
+
+```{r}
+suppressWarnings(suppressMessages(library(dplyr)))
+suppressWarnings(suppressMessages(library(rlist)))
+suppressWarnings(suppressMessages(library(snakecase)))
+```
+
+<!-- #region -->
+# Generating required files from the [processDatasets.py](https://github.com/TheJacksonLaboratory/coronavirus-sample-pre-processing-nf/blob/master/scripts/processDatasets.py)
+
+
+**Note**: Using the latest one by date, [`case_control-april21.tsv`](https://github.com/TheJacksonLaboratory/coronavirus-sample-pre-processing-nf/tree/655ccc8aead83ecd40168fa83825f2f87c3cf28a/data)
+
+The following code won't work unless you have the token, to get the link with the token you have to be logged in to GitHub in the browser that you are opening the following link. Copy the url of the file here [`case_control-april21.tsv`](https://github.com/TheJacksonLaboratory/coronavirus-sample-pre-processing-nf/tree/655ccc8aead83ecd40168fa83825f2f87c3cf28a/data)
+<!-- #endregion -->
+
+```{r}
+metadata <- as.data.frame(data.table::fread("https://raw.githubusercontent.com/TheJacksonLaboratory/coronavirus-sample-pre-processing-nf/655ccc8aead83ecd40168fa83825f2f87c3cf28a/data/case_control-april21.tsv?token=NOTTHEREALTOKEN"))
+```
+
+```{r}
+head(metadata,2)
+```
+
+# Step 1. Create an individual dataframe for each contrast
+
+And store all the individual cohort dataframes in a list to be able in the next step to write them into seperate .csv files.<br>
+Below I am printing a summary of the list to check I have all **49** dataframes, one for each contrast.
+
+```{r}
+contrasts_ids       <- unique(metadata$cohort)
+
+all_contrasts_meta <- list()
+for (contrast_id in contrasts_ids){
+  contrast_meta <- metadata[metadata$cohort == contrast_id , ]
+  all_contrasts_meta <- rlist::list.append(all_contrasts_meta, contrast_meta)
+}
+
+head(summary(all_contrasts_meta))
+length(all_contrasts_meta)
+```
+
+<!-- #region -->
+# Step 2. Loop over every contrast metadata dataframe and write as .csv
+
+We will also use some of the columns to create a unique id that describes each contrast. I chose here to add the **`srp`** and **`category`** values of the `case` subjects, as it might provide more information that the names of the controls. <br>
+
+
+Briefly, the following block will:
+
+1. access each of the contrast dataframes based on their position in the list named **`all_contrasts_meta`**
+2. assign the **i-th** element of the list (**contrast dataframe i**) to the variable `meta`
+3. re-order the **`meta`** dataframe based on column 'status' (a case will be the first row)
+4. save in the **`name`** variable the unique id derived from **`srp`**, **`category`** of a case dataframe entry. $^{*}$
+5. extract info on total **sample size of cohort**, number of controls and number of cases in each contrast
+6. keep only relevant columns initially named **`srr`** **`status`**, and rename **`srr`** to **`sample_id`** 
+7. based on the info retrieved from 4., 5. create a filename that describes the contrast and adds info on sample size
+8. write each contrast metadata modified dataframe as a .csv file with 2 columns and a header (colnames: **`sample_id`** ,**`status`** ).
+
+\* **NOTE:**  I am using also the function `snakecase::to_parsed_case()` to clean characters like `/` in the filename that might break filepaths.
+<!-- #endregion -->
+
+```{r}
+system("mkdir -p ../data", intern = TRUE)
+```
+
+```{r}
+savedir <- '../data/'
+
+for (i in seq_along(all_contrasts_meta)) {
+  meta <- all_contrasts_meta[[i]]
+  cohort <- meta$cohort[1]
+  meta <- meta[order(meta$status),]
+  name <-  snakecase::to_parsed_case(paste(meta[1, c('srp', 'category')], collapse = "_"))
+  N_cohort   <- dim(meta)[1]
+  N_controls <- dim(meta[meta$status == 'control', ])[1]
+  N_cases    <- dim(meta[meta$status == 'case', ])[1]
+  toWrite <- meta [, c("srr","status")]
+  colnames(toWrite) <- c("sample_id", "status")
+  cohort_filename <- paste0("cohort_", cohort, 
+                             "__Nctrl_", N_controls ,
+                             "__Ncases_", N_cases )
+    
+  data.table::fwrite( toWrite, 
+                      file = paste0(savedir, cohort_filename, ".csv") , 
+                      sep = ",", col.names = TRUE, row.names = FALSE)
+    
+  message( cohort_filename, appendLF = FALSE)
+}
+```
+
+## **NOTE:**
+
+We observe above that some of the contrasts have a very small sample size.
+I am not excluding those from the CloudOS run, but these will fail, especially the ones with < 10 N, sample size.
+
+
+# Step 3. Add an extra contrast with all controls vs all cases (any viral infection) and generate the **`--accession_list`** input
+
+To create a contrast with a larger sample size, assuming we do not have biological replicates with different SRR ids, which would inflate falsely our sample size we can keep the unique control and unique cases across any viral infection. This might give more robust results as we will have a larger sample size.
+
+For creating the contrast 'all contrasts vs all cases' see block below:
+
+```{r}
+metadata <- metadata[, c("srr","status")]
+colnames(metadata) <- c("sample_id", "status")
+```
+
+```{r}
+head(metadata, 2)
+dim(metadata)
+```
+
+```{r}
+# use the function 'dplyr::distinct()' to keep unique rows
+metadata <- dplyr::distinct(metadata)
+```
+
+```{r}
+head(metadata, 2)
+dim(metadata)
+```
+
+## Some samples serve as both cases and controls
+
+```{r}
+length(unique(metadata[, "sample_id"]))
+```
+
+```{r}
+# Let's inspect which ones:
+
+metadata %>% 
+    count( sample_id, sort = TRUE) %>%
+    filter( n >= 2 ) -> duplicates_df
+duplicates_df
+```
+
+```{r}
+metadata[ metadata$sample_id %in%  duplicates_df$sample_id,]
+```
+
+We have **351** subjects in our cohort (unique **SRR** ids). <br>
+Let's now inspect the breakdown by class, **`control`**, **`case`**.
+
+```{r}
+n_controls <- length(metadata$sample_id[metadata$status == "control"])
+n_cases    <- length(metadata$sample_id[metadata$status == "case"])
+
+message("Number of controls: ", n_controls, appendLF = FALSE)
+message("Number of cases   : ", n_cases   , appendLF = FALSE) 
+```
+
+```{r}
+# create the accession list
+
+data.table::fwrite(as.data.frame(metadata$sample_id), 
+                   file = paste0(savedir, "accession_N351.list") , 
+                   col.names = FALSE, 
+                   row.names = FALSE)
+cat(list.files(path =  "../data", 
+               full.names = TRUE,
+               pattern = "*accession_N351.list"))
+```
+
+```{r}
+# write in a file the all vs all contrast metadata table
+data.table::fwrite( toWrite, file = paste0( savedir, 
+                                           "all_unique_controls_vs_all_cases", 
+                                           "__Nctrl_", n_controls ,
+                                           "__Ncases_", n_cases, 
+                                           ".csv") , 
+                   sep = ",", col.names = TRUE, row.names = FALSE)
+
+cat(list.files(path =  "../data", 
+               full.names = TRUE,
+               pattern = "*all_unique_controls_vs_all_cases*"))
+```
+
+Finally let's list all the contrast metadata files (we expect 50, 49 contrasts + 1 all vs all)
+
+```{r}
+metadata_files <- list.files(path = savedir,pattern = "*__Nctrl_*")
+length(metadata_files)
+```
+
+# Step 4. Make the created files contrast metadata files available
+
+We can use any of the following paths with Nextflow:
+
+1. **`my/path/only/I/have/access/to`**           (local not recommended unless in an HPC environment)
+2. **`https://`**  
+3. **`s3://`**  (AWS)
+4. **`gs://`**  (Google Cloud Platform)
+
+I opted for option 2. and for keeping the input data in the same place as the pipeline, I once again opted for the heuristic suggested by the authors of the R package `ropensci/piggyback`. I uploaded the files in a release in the pipeline repository, under the tag name `SRA`.
+
+This can be found here:<br>
+https://github.com/TheJacksonLaboratory/coronavirus-nf/releases/tag/SRA
+
+All the files can now be accessible in the url with the pattern:
+
+```console
+https://github.com/TheJacksonLaboratory/coronavirus-nf/releases/download/SRA/<file_basename>
+```
+
+
+# Step 5. Use the available links to generate the input for **`--hbadeals_metadata`**
+
+
+
+We will now use the list of files that we saved in the variable 'metadata_files' in **Step 3**.
+
+```{r}
+cat(metadata_files[1:3], sep = "\n")
+```
+
+```{r}
+url <- paste0("https://github.com/TheJacksonLaboratory/coronavirus-nf/releases/download/SRA/", metadata_files)
+```
+
+```{r}
+cat(url[1:3], sep = "\n")
+```
+
+```{r}
+metadata <- data.frame(metadata_files, url)
+colnames(metadata) <- c("contrast","metadata_file")
+```
+
+```{r}
+head(metadata, 2)
+```
+
+Save to a file and then upload all to the GitHub release:
+
+```{r}
+data.table::fwrite( metadata, 
+                   file = paste0( savedir,"sra_masterfile_n351.csv"),
+                   sep = ",", 
+                   col.names = TRUE,
+                   row.names = FALSE)
+
+cat(list.files(path =  "../data", 
+               full.names = TRUE,
+               pattern = "*sra_masterfile_n351.csv*"))
+```
+
+# Step 6: Create a release in the GitHub repo to host the data in the binaries section
+
+
+The release which has the input data we need for running the pipeline can be found here:<br>
+https://github.com/TheJacksonLaboratory/coronavirus-nf/releases/tag/SRA
+
+
+We will run the Nextflow pipeline with these arguments:
+
+```groovy
+nextflow run main.nf \
+--accesionList https://github.com/TheJacksonLaboratory/coronavirus-nf/releases/download/SRA/accession_N351.list \
+--hbadeals_metadata https://github.com/TheJacksonLaboratory/coronavirus-nf/releases/download/SRA/sra_masterfile_n351.csv \
+-- ...etc
+
+```
+
+
+# Checksums of files with the sha256 algorithm 
+
+```{r}
+message("Generating sha256 checksums of the files in the `..data/` directory .. ")
+system("cd ../data/ && sha256sum * > sha256sums.txt", intern = TRUE)
+message("Done!\n")
+
+data.table::fread("../data/sha256sums.txt", header = FALSE, col.names = c("sha256sum", "file"))
+```
+
+# Libraries metadata
+
+```{r}
+ utils::sessionInfo()
+```
