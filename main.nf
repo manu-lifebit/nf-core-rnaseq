@@ -1512,7 +1512,7 @@ if (!params.skipAlignment) {
         output:
             file("rsem_tpm_gene.txt")
             file("rsem_tpm_isoform.txt")
-            file("isoforms_results.tar.gz") into ch_rsem_isoforms_results
+            file("rsem_isoforms_results.tar.gz") into ch_rsem_isoforms_results
 
         script:
         """
@@ -1534,8 +1534,8 @@ if (!params.skipAlignment) {
 
         mkdir isoforms_results_dir
         cp *.isoforms.results isoforms_results_dir/ && cd isoforms_results_dir
-        tar czvf isoforms_results.tar.gz *.isoforms.results && cd -
-        mv isoforms_results_dir/isoforms_results.tar.gz .
+        tar czvf rsem_isoforms_results.tar.gz *.isoforms.results && cd -
+        mv isoforms_results_dir/rsem_isoforms_results.tar.gz .
         """
     }
 
@@ -1554,7 +1554,7 @@ if (!params.skipAlignment) {
             file(rsem_results_archive) from ch_rsem_isoforms_results
 
         output:
-            file("isoforms_results.tar.gz") into ch_rsem_results_isoforms_aggregated
+            file("aggregated_isoforms_results.tar.gz") into ch_rsem_results_isoforms_aggregated
 
         when: 'hbadeals' in tools
 
@@ -1583,7 +1583,7 @@ if (!params.skipAlignment) {
 
             input:
                 set val(contrast_id), file(metadata) from ch_hbadeals_metadata
-                each file("isoforms_results.tar.gz") from ch_rsem_results_isoforms_hbadeals
+                each file(isoforms_results_tar_gz) from ch_rsem_results_isoforms_hbadeals
 
             output:
                 file("*csv")
@@ -1593,7 +1593,7 @@ if (!params.skipAlignment) {
             """
             echo 'metadata file:' $metadata
             ls -l
-            tar xzvf isoforms_results.tar.gz && rm isoforms_results.tar.gz
+            tar xzvf $isoforms_results_tar_gz && rm $isoforms_results_tar_gz
 
             rsem2hbadeals.R \
             --rsem_folder='.' \
