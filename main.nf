@@ -1111,6 +1111,14 @@ if (!params.skipAlignment) {
       process star {
           label 'high_memory'
           tag "$name"
+          publishDir "${params.outdir}/STAR", mode: 'copy',
+              saveAs: {filename ->
+                  if (filename.indexOf(".bam") == -1) "logs/$filename"
+                  else if (params.saveUnaligned && filename != "where_are_my_files.txt" && 'Unmapped' in filename) unmapped/filename
+                  else if (!params.saveAlignedIntermediates && filename == "where_are_my_files.txt") filename
+                  else if (params.saveAlignedIntermediates && filename != "where_are_my_files.txt") filename
+                  else null
+              }
 
           input:
           set val(name), file(reads) from trimmed_reads_alignment
