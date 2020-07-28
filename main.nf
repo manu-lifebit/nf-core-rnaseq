@@ -1119,6 +1119,7 @@ if (!params.skipAlignment) {
                   else if (params.saveAlignedIntermediates && filename != "where_are_my_files.txt") filename
                   else null
               }
+            publishDir "${params.outdir}/STAR/tab/", pattern: '*out.tab'
 
           input:
           set val(name), file(reads) from trimmed_reads_alignment
