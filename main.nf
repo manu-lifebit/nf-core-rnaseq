@@ -1958,6 +1958,7 @@ process MULTIQC {
     """
 }
 
+/*
 process OUTPUT_DOCUMENTATION {
     publishDir "${params.outdir}/pipeline_info", mode: params.publish_dir_mode
 
@@ -1973,6 +1974,7 @@ process OUTPUT_DOCUMENTATION {
     markdown_to_html.py $output_docs -o results_description.html
     """
 }
+*/
 
 /*
  * Completion e-mail notification
