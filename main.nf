@@ -1878,7 +1878,7 @@ Channel.from(summary.collect{ [it.key, it.value] })
         </dl>
     """.stripIndent() }
     .set { ch_workflow_summary }
-
+/*
 process GET_SOFTWARE_VERSIONS {
     publishDir "${params.outdir}/pipeline_info", mode: params.publish_dir_mode,
         saveAs: { filename ->
@@ -1901,6 +1901,7 @@ process GET_SOFTWARE_VERSIONS {
     scrape_software_versions.py &> software_versions_mqc.yaml
     """
 }
+*/
 
 process MULTIQC {
     publishDir "${params.outdir}/multiqc", mode: params.publish_dir_mode
@@ -1925,7 +1926,7 @@ process MULTIQC {
     path ('salmon/*') from salmon_logs.collect().ifEmpty([])
     path ('sample_correlation/*') from sample_correlation_results.collect().ifEmpty([])
     path ('sortmerna/*') from sortmerna_logs.collect().ifEmpty([])
-    path ('software_versions/*') from ch_software_versions_yaml.collect()
+    //path ('software_versions/*') from ch_software_versions_yaml.collect()
     path workflow_summary from ch_workflow_summary.collectFile(name: "workflow_summary_mqc.yaml")
 
     output:
