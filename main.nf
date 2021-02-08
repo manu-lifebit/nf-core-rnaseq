@@ -1897,23 +1897,7 @@ process GET_SOFTWARE_VERSIONS {
     fastqc --version &> v_fastqc.txt
     cutadapt --version &> v_cutadapt.txt
     trim_galore --version &> v_trim_galore.txt
-    sortmerna --version &> v_sortmerna.txt
-    STAR --version &> v_star.txt
-    hisat2 --version &> v_hisat2.txt
-    stringtie --version &> v_stringtie.txt
-    preseq &> v_preseq.txt
-    read_duplication.py --version &> v_rseqc.txt
-    bamCoverage --version &> v_deeptools.txt || true
-    featureCounts -v &> v_featurecounts.txt
-    rsem-calculate-expression --version &> v_rsem.txt
-    salmon --version &> v_salmon.txt
-    picard MarkDuplicates --version &> v_markduplicates.txt  || true
-    samtools --version &> v_samtools.txt
     multiqc --version &> v_multiqc.txt
-    Rscript -e "library(edgeR); write(x=as.character(packageVersion('edgeR')), file='v_edgeR.txt')"
-    Rscript -e "library(dupRadar); write(x=as.character(packageVersion('dupRadar')), file='v_dupRadar.txt')"
-    umi_tools --version &> v_umi_tools.txt
-    unset DISPLAY && qualimap rnaseq &> v_qualimap.txt || true
     scrape_software_versions.py &> software_versions_mqc.yaml
     """
 }
