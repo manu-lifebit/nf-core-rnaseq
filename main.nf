@@ -663,7 +663,7 @@ if (!params.skip_alignment) {
     if (params.aligner == 'star' && !params.star_index && params.fasta) {
         process STAR_GENOMEGENERATE {
             tag "$fasta"
-            label 'high_memory'
+            label 'process_high'
             publishDir path: { params.save_reference ? "${params.outdir}/reference/genome/star" : params.outdir },
                 saveAs: { params.save_reference ? it : null }, mode: params.publish_dir_mode
 
@@ -1059,7 +1059,7 @@ if (!params.skip_alignment) {
         hisat_stdout = Channel.empty()
         process STAR_ALIGN {
             tag "$name"
-            label 'high_memory'
+            label 'process_high'
             publishDir "${params.outdir}/star", mode: params.publish_dir_mode,
                 saveAs: { filename ->
                     if (filename.indexOf(".bam") == -1) "logs/$filename"
@@ -1125,7 +1125,7 @@ if (!params.skip_alignment) {
         star_log = Channel.empty()
         process HISAT2_ALIGN {
             tag "$name"
-            label 'high_memory'
+            label 'process_high'
             publishDir "${params.outdir}/hisat2", mode: params.publish_dir_mode,
                 saveAs: { filename ->
                     if (filename.indexOf(".hisat2_summary.txt") > 0) "logs/$filename"
@@ -1392,7 +1392,7 @@ if (!params.skip_alignment) {
 
     process PRESEQ {
         tag "${bam.baseName - '.sorted'}"
-        label 'high_time'
+        label 'process_long'
         publishDir "${params.outdir}/preseq", mode: params.publish_dir_mode
 
         when:
@@ -1477,7 +1477,7 @@ if (!params.skip_alignment) {
 
     process DUPRADAR {
         tag "${bam.baseName - '.sorted.markDups'}"
-        label 'high_time'
+        label 'process_long'
         publishDir "${params.outdir}/dupradar", mode: params.publish_dir_mode,
             saveAs: { filename ->
                 if (filename.indexOf("_duprateExpDens.pdf") > 0) "scatter_plots/$filename"
