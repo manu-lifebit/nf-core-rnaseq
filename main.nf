@@ -1772,10 +1772,6 @@ if (params.pseudo_aligner == 'salmon') {
         def unmapped = params.save_unaligned ? "--writeUnmappedNames" : ''
         """
         salmon quant \\
-            --validateMappings \\
-            --seqBias \\
-            --useVBOpt \\
-            --gcBias \\
             --geneMap $gtf \\
             --threads $task.cpus \\
             --libType=$rnastrandness \\
