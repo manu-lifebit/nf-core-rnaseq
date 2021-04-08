@@ -1900,7 +1900,7 @@ process GET_SOFTWARE_VERSIONS {
 */
 
 process MULTIQC {
-    publishDir "${params.outdir}/multiqc", mode: params.publish_dir_mode
+    publishDir "${params.outdir}/MultiQC", mode: params.publish_dir_mode
 
     when:
     !params.skip_multiqc
