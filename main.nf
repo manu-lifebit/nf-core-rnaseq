@@ -907,7 +907,7 @@ if (params.with_umi) {
 if (!params.skip_trimming) {
     process TRIMGALORE {
         tag "$name"
-        label 'process_high'
+        label 'process_low'
         publishDir "${params.outdir}/trimgalore", mode: params.publish_dir_mode,
             saveAs: { filename ->
                 if (filename.indexOf("_fastqc") > 0) "fastqc/$filename"
@@ -1059,7 +1059,7 @@ if (!params.skip_alignment) {
         hisat_stdout = Channel.empty()
         process STAR_ALIGN {
             tag "$name"
-            label 'high_memory'
+            label 'process_low'
             publishDir "${params.outdir}/star", mode: params.publish_dir_mode,
                 saveAs: { filename ->
                     if (filename.indexOf(".bam") == -1) "logs/$filename"
