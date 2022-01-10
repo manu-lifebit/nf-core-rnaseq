@@ -1757,9 +1757,9 @@ if (params.pseudo_aligner == 'salmon') {
         path gtf from ch_gtf
 
         output:
-        tuple val(sample), path("${sample}/") into salmon_parsegtf,
-                                                   salmon_tximport
-        path "${sample}/" into salmon_logs
+        tuple val(sample), path("${sample}/") into ( salmon_parsegtf,
+                                                   salmon_tximport, salmon_logs )
+        //path "${sample}/" into salmon_logs
 
         script:
         def rnastrandness = params.single_end ? 'U' : 'IU'
@@ -1919,7 +1919,7 @@ process MULTIQC {
     path ('featurecounts/*') from featureCounts_logs.collect().ifEmpty([])
     path ('featurecounts_biotype/*') from featureCounts_biotype.collect().ifEmpty([])
     path ('rsem/*') from rsem_logs.collect().ifEmpty([])
-    path ('salmon/*') from salmon_logs.collect().ifEmpty([])
+    path ('salmon/*') from salmon_logs.collect{it[1]}.ifEmpty([])
     path ('sample_correlation/*') from sample_correlation_results.collect().ifEmpty([])
     path ('sortmerna/*') from sortmerna_logs.collect().ifEmpty([])
     //path ('software_versions/*') from ch_software_versions_yaml.collect()
