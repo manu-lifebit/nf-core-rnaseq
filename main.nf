@@ -1750,9 +1750,6 @@ if (params.pseudo_aligner == 'salmon') {
     process SALMON_QUANT {
         tag "$sample"
         publishDir "${params.outdir}/salmon", mode: params.publish_dir_mode
-        //publishDir "${params.outdir}/salmon/${sample}", mode: params.publish_dir_mode
-        errorStrategy 'terminate'
-        echo true
         
         input:
         tuple val(sample), path(reads) from trimmed_reads_salmon
@@ -1762,10 +1759,7 @@ if (params.pseudo_aligner == 'salmon') {
         output:
         tuple val(sample), path("${sample}", type: 'dir') into ( salmon_parsegtf,
                                                    salmon_tximport, salmon_logs )
-        //tuple val(sample), path("${sample}/") into ( salmon_parsegtf,
-        //                                           salmon_tximport, salmon_logs )
-        //path "${sample}/" into salmon_logs
-
+        
         script:
         def rnastrandness = params.single_end ? 'U' : 'IU'
         if (forward_stranded && !unstranded) {
@@ -1776,7 +1770,6 @@ if (params.pseudo_aligner == 'salmon') {
         def endedness = params.single_end ? "-r ${reads[0]}" : "-1 ${reads[0]} -2 ${reads[1]}"
         def unmapped = params.save_unaligned ? "--writeUnmappedNames" : ''
                 """
-                ls -l
         salmon quant \\
             --geneMap $gtf \\
             --threads $task.cpus \\
@@ -1784,8 +1777,7 @@ if (params.pseudo_aligner == 'salmon') {
             --index $index \\
             $endedness \\
             $unmapped \\
-            -o $sample 2>salmon_log_output.err
-            ls -l
+            -o $sample
         """
     }
 
