@@ -1751,7 +1751,8 @@ if (params.pseudo_aligner == 'salmon') {
         tag "$sample"
         publishDir "${params.outdir}/salmon", mode: params.publish_dir_mode
         //publishDir "${params.outdir}/salmon/${sample}", mode: params.publish_dir_mode
-
+        errorStrategy 'ignore'
+        
         input:
         tuple val(sample), path(reads) from trimmed_reads_salmon
         path index from ch_salmon_index
