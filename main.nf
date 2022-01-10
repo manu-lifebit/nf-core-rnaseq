@@ -1760,9 +1760,9 @@ if (params.pseudo_aligner == 'salmon') {
         path gtf from ch_gtf
 
         output:
-        tuple val(sample), path("${sample}/") into ( salmon_parsegtf,
+        tuple val(sample), path("${sample}", type: 'dir') into ( salmon_parsegtf,
                                                    salmon_tximport, salmon_logs )
-        //tuple val(sample), path("${sample}/*") into ( salmon_parsegtf,
+        //tuple val(sample), path("${sample}/") into ( salmon_parsegtf,
         //                                           salmon_tximport, salmon_logs )
         //path "${sample}/" into salmon_logs
 
