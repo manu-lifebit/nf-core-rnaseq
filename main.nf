@@ -907,7 +907,7 @@ if (params.with_umi) {
 if (!params.skip_trimming) {
     process TRIMGALORE {
         tag "$name"
-        label 'process_high'
+        label 'process_low'
         publishDir "${params.outdir}/trimgalore", mode: params.publish_dir_mode,
             saveAs: { filename ->
                 if (filename.indexOf("_fastqc") > 0) "fastqc/$filename"
@@ -1059,7 +1059,7 @@ if (!params.skip_alignment) {
         hisat_stdout = Channel.empty()
         process STAR_ALIGN {
             tag "$name"
-            label 'high_memory'
+            label 'process_low'
             publishDir "${params.outdir}/star", mode: params.publish_dir_mode,
                 saveAs: { filename ->
                     if (filename.indexOf(".bam") == -1) "logs/$filename"
@@ -1750,17 +1750,16 @@ if (params.pseudo_aligner == 'salmon') {
     process SALMON_QUANT {
         tag "$sample"
         publishDir "${params.outdir}/salmon", mode: params.publish_dir_mode
-
+        
         input:
         tuple val(sample), path(reads) from trimmed_reads_salmon
         path index from ch_salmon_index
         path gtf from ch_gtf
 
         output:
-        tuple val(sample), path("${sample}/") into salmon_parsegtf,
-                                                   salmon_tximport
-        path "${sample}/" into salmon_logs
-
+        tuple val(sample), path("${sample}", type: 'dir') into ( salmon_parsegtf,
+                                                   salmon_tximport, salmon_logs )
+        
         script:
         def rnastrandness = params.single_end ? 'U' : 'IU'
         if (forward_stranded && !unstranded) {
@@ -1770,7 +1769,7 @@ if (params.pseudo_aligner == 'salmon') {
         }
         def endedness = params.single_end ? "-r ${reads[0]}" : "-1 ${reads[0]} -2 ${reads[1]}"
         def unmapped = params.save_unaligned ? "--writeUnmappedNames" : ''
-        """
+                """
         salmon quant \\
             --geneMap $gtf \\
             --threads $task.cpus \\
@@ -1919,7 +1918,7 @@ process MULTIQC {
     path ('featurecounts/*') from featureCounts_logs.collect().ifEmpty([])
     path ('featurecounts_biotype/*') from featureCounts_biotype.collect().ifEmpty([])
     path ('rsem/*') from rsem_logs.collect().ifEmpty([])
-    path ('salmon/*') from salmon_logs.collect().ifEmpty([])
+    path ('salmon/*') from salmon_logs.collect{it[1]}.ifEmpty([])
     path ('sample_correlation/*') from sample_correlation_results.collect().ifEmpty([])
     path ('sortmerna/*') from sortmerna_logs.collect().ifEmpty([])
     //path ('software_versions/*') from ch_software_versions_yaml.collect()
